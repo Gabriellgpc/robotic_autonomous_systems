@@ -7,16 +7,17 @@ public:
     void update(const double _kp, double _ki, double _kd);
     // recebe a referencia e o valor atual da saida
     // retorna o sinal de controle
-    double step(const double ref, const double curr);
+    double step(const double error);
     void reset();
 private:
     double kp;
     double ki;
     double kd;
     
-    double cumError;
-    double prevValue;
+    double integral;
+    double deriv;
     
     bool inited = false;
     double prevTime; //[s]
+    double prevError;
 };

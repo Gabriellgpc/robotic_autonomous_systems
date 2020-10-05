@@ -6,14 +6,18 @@ CXXFLAGS = -O2 -I ${COPSIM_BASEDIR}/programming/b0RemoteApiBindings/cpp/msgpack-
 LDFLAGS =	-L ${COPSIM_BASEDIR}/programming/bluezero/build
 LDLIBS = -lpthread	-lb0
 
+OBJS	=	b0RemoteApi.o	utils.o	pid.o	kinematicsControllers.o
+
 PROGRAM = meta3
-OBJS	=	b0RemoteApi.o	utils.o	pid.o
 
 all:	${PROGRAM}	${OBJS}
 
-meta3:	meta3.cpp b0RemoteApi.o utils.o
+meta3:	meta3.cpp ${OBJS}
+
 
 pid.o:	pid.hpp	pid.cpp
+
+kinemacticsControllers.o:	kinematicsControllers.hpp kinematicsControllers.cpp	pid.o
 
 b0RemoteApi.o:	b0RemoteApi.h b0RemoteApi.cpp
 
