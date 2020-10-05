@@ -1,69 +1,8 @@
-// Enabling the B0-based remote API - client side
-// REF.: https://www.coppeliarobotics.com/helpFiles/en/b0RemoteApiClientSide.htm
-
+#include "utils.hpp"
 #include "b0RemoteApi.h"
 
-#include <cstdio>
-#include <iostream>
-#include <cmath>
-#include <vector>
-#include <tuple>
 
-using namespace std;
-
-typedef std::tuple<double, double, double> config_t;
-
-// xi, yi, thi => ponto e orientação inicial
-// xf, yf, thf => ponto e orientação final
-// coef : [a0,a1,a2,a3,b0,b1,b2,b3]
-void interPoly3(const float xi, 
-                const float yi, 
-                const float thi, 
-                const float xf, 
-                const float yf, 
-                const float thf, 
-                double coef[]);
-void pathGenerator(const double coef[], 
-                   const uint32_t numPoints, 
-                   double x[], double y[], double th[]);
-void poly3(const double coef[], 
-           const double l, 
-           double &x, double &y, double &th);
-
-#define N 200
-
-int main(){
-    double path_coef[8];
-    double x_v[N], y_v[N], th_v[N];
-    b0RemoteApi client("b0RemoteApi_CoppeliaSim-addOn","b0RemoteApiAddOn");
-    cout << "Conectado!\n";
-    client.simxStartSimulation(client.simxServiceCall());    
-
-    interPoly3(0,0,0, 2.5,2.5, M_PI_4f64, path_coef);
-    pathGenerator(path_coef, N, x_v, y_v, th_v);
-    int lineSize = 1;
-    int colorRed[3] = {255,0,0};
-    
-    // cout << "Some points:\n";
-    float segment[6];
-    for(int i = 1; i < N; i++){
-        // printf("i:%d | (%.2f, %.2f, %.2f)\n", i, x_v[i], y_v[i], th_v[i]);
-        segment[0] = x_v[i-1]; // x 
-        segment[1] = y_v[i-1]; // y
-        segment[2] = 0.3;      // z
-        segment[3] = x_v[i]; // x 
-        segment[4] = y_v[i]; // y
-        segment[5] = 0.3;      // z
-        client.simxAddDrawingObject_segments(lineSize, colorRed, segment, 6, client.simxServiceCall());
-    }
-
-    client.simxSleep(30*1000);
-    client.simxStopSimulation(client.simxServiceCall());
-
-    return 0;
-}
-
-void poly3(const double coef[], const double l, double &x, double &y, double &th){
+void poly3(const double coef[], const double l, float &x, float &y, float &th){
     double l2 = l*l;
     double l3 = l2*l;
     
@@ -73,7 +12,7 @@ void poly3(const double coef[], const double l, double &x, double &y, double &th
                  coef[1] + 2*coef[2]*l + 3*coef[3]*l2);
 }
 
-void pathGenerator(const double coef[],const uint32_t numPoints, double x[], double y[], double th[]){
+void pathGenerator(const double coef[],const uint32_t numPoints, float x[], float y[], float th[]){
     double l = 0, step_l = 1.0/numPoints;
     for(int i = 0; i < numPoints; i++)
     {   
@@ -94,7 +33,6 @@ void interPoly3(float xi, float yi, float thi, float xf, float yf, float thf, do
     bool thf_test = ((M_PI_2 - delta) < thf) && (thf < (M_PI_2 + delta));
 
     if(thi_test && thf_test){
-        cout << "Caso especial 1\n";
         // # caso especial 1
         *b1 = dy;    //#coef. livre
         *b2 = 0;     //#coef. livre
@@ -106,7 +44,6 @@ void interPoly3(float xi, float yi, float thi, float xf, float yf, float thf, do
         *b3 = dy - (*b1) - (*b2);
     }
     else if(thi_test){
-        cout << "Caso especial 2\n";
         // #caso especial 2
         double alpha_f = tanf64(thf);
         *a3 = -dx/2.0;  //#coef. livre
@@ -119,7 +56,6 @@ void interPoly3(float xi, float yi, float thi, float xf, float yf, float thf, do
         *b2 = (2*alpha_f*dx - dy) + alpha_f*(*a3) - 2*(*b3);
     }
     else if(thf_test){
-        cout << "Caso especial 3\n";
         // #caso especial 3
         double alpha_i = tanf64(thi);
         *a1 = 3*dx/2.0;  //#coef. livre
@@ -132,7 +68,6 @@ void interPoly3(float xi, float yi, float thi, float xf, float yf, float thf, do
         *b3 = dy - alpha_i*(*a1) - (*b2);
     }
     else{
-        cout << "Caso geral\n";
         // #caso geral
         double alpha_i = tanf64(thi);
         double alpha_f = tanf64(thf);
