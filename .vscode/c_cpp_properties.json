@@ -1,0 +1,21 @@
+{
+    "configurations": [
+        {
+            "name": "Linux",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "/usr/local/lib/python3.8/dist-packages/numpy/core/include/**",
+                "${HOME}/CoppeliaSim_Edu_V4_1_0_Ubuntu20_04/programming/bluezero/include/b0/bindings/**",
+                "${HOME}/CoppeliaSim_Edu_V4_1_0_Ubuntu20_04/programming/b0RemoteApiBindings/cpp/msgpack-c/include",
+                "${workspaceFolder}/p1m3/**",
+                "/usr/include/python3.8/**"
+            ],
+            "defines": [],
+            "compilerPath": "/usr/bin/g++",
+            "cStandard": "gnu18",
+            "cppStandard": "gnu++14",
+            "intelliSenseMode": "gcc-x64"
+        }
+    ],
+    "version": 4
+}
