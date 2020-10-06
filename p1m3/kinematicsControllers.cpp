@@ -22,6 +22,9 @@ PositionController::PositionController(const double lin_Kp,const double lin_Ki,c
 * ang_error:  erro angular[rad](util para debug) 
 * return: true ao chegar no destino
 */
+
+//distancia minima [m], utilizada como condicao de parada para o controlador de posicao
+#define MIN_DIST 0.10 //[m]
 bool PositionController::step(const double x_ref, const double y_ref, 
                               const double x_curr, const double y_curr, const double th_curr,
                               double &u_v, double &u_w,
@@ -34,7 +37,7 @@ bool PositionController::step(const double x_ref, const double y_ref,
     ang_error = atan2(delta_y, delta_x) - th_curr;
     lin_error = sqrt( delta_x*delta_x + delta_y*delta_y ) * cos(ang_error);
 
-    if(_closeEnough(lin_error)){
+    if(fabs(lin_error) <= MIN_DIST){
         u_v = 0.0;
         u_w = 0.0;
         this->reset();
@@ -50,10 +53,7 @@ void PositionController::reset()
     lin_controller.reset();
     ang_controller.reset();
 }     
-bool PositionController::_closeEnough(const double dl)
-{
-    return (fabs(dl) <= MIN_DIST);
-}
+
 void PositionController::update(const double lin_Kp,const double lin_Ki,const double lin_Kd,
                                 const double ang_Kp,const double ang_Ki,const double ang_Kd)
 {

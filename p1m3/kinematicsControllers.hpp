@@ -1,9 +1,6 @@
 #pragma once
 #include "pid.hpp"
 
-//distancia minima [m], utilizada como condicao de parada para o controlador de posicao
-#define MIN_DIST 0.01 //[m]
-
 class PositionController{
 public:
     PositionController(const double lin_Kp,const double lin_Ki,const double lin_Kd,
@@ -34,8 +31,6 @@ public:
     void update(const double lin_Kp,const double lin_Ki,const double lin_Kd,
                 const double ang_Kp,const double ang_Ki,const double ang_Kd);
 private:
-    bool _closeEnough(const double dl);
-
     PID lin_controller;
     PID ang_controller;
 };
