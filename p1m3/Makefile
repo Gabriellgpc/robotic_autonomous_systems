@@ -1,14 +1,17 @@
 COPSIM_BASEDIR = /home/lgabriel/CoppeliaSim_Edu_V4_1_0_Ubuntu20_04
 
-CXX = g++
+CXX = g++	-std=c++11
 CXXFLAGS = -O2 -I ${COPSIM_BASEDIR}/programming/b0RemoteApiBindings/cpp/msgpack-c/include \
-					 -I ${COPSIM_BASEDIR}/programming/bluezero/include/b0/bindings
+			   -I ${COPSIM_BASEDIR}/programming/bluezero/include/b0/bindings\
+			   -I /usr/include/python3.8\
+			   -I /usr/local/lib/python3.8/dist-packages/numpy/core/include
 LDFLAGS =	-L ${COPSIM_BASEDIR}/programming/bluezero/build
-LDLIBS = -lpthread	-lb0
+
+LDLIBS = -lpthread	-lb0	-fopenmp -lpython3.8
 
 OBJS	=	b0RemoteApi.o	utils.o	pid.o	kinematicsControllers.o
 
-PROGRAM = meta3
+PROGRAM = meta3	plotTest
 
 all:	${PROGRAM}	${OBJS}
 

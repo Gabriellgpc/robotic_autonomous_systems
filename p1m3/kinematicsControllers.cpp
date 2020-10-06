@@ -29,10 +29,10 @@ bool PositionController::step(const double x_ref, const double y_ref,
 {
     static double delta_x, delta_y;
     delta_x = x_ref - x_curr;
-    delta_y = x_ref - x_curr;
+    delta_y = y_ref - y_curr;
     
     ang_error = atan2(delta_y, delta_x) - th_curr;
-    lin_error = sqrt( delta_x*delta_x + delta_y*delta_y ) * fabs(cos(th_curr));
+    lin_error = sqrt( delta_x*delta_x + delta_y*delta_y ) * cos(ang_error);
 
     if(_closeEnough(lin_error)){
         u_v = 0.0;
@@ -41,11 +41,7 @@ bool PositionController::step(const double x_ref, const double y_ref,
         return true;
     }
     u_v = lin_controller.step(lin_error);
-    
-    // if(fabs(ang_error) <= 0.01)
     u_w = ang_controller.step(ang_error);
-    // else
-    //     u_w = 0.0;
     
     return false;
 }

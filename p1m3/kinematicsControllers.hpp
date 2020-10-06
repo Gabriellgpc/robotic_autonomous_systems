@@ -2,7 +2,7 @@
 #include "pid.hpp"
 
 //distancia minima [m], utilizada como condicao de parada para o controlador de posicao
-#define MIN_DIST 0.001 //[m]
+#define MIN_DIST 0.01 //[m]
 
 class PositionController{
 public:
