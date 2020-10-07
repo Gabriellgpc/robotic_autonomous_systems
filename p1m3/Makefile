@@ -1,4 +1,4 @@
-COPSIM_BASEDIR = /home/lgabriel/CoppeliaSim_Edu_V4_1_0_Ubuntu20_04
+COPSIM_BASEDIR = ${HOME}/CoppeliaSim_Edu_V4_1_0_Ubuntu20_04
 
 CXX = g++	-std=c++11
 CXXFLAGS = -O2 -I ${COPSIM_BASEDIR}/programming/b0RemoteApiBindings/cpp/msgpack-c/include \
@@ -11,7 +11,7 @@ LDLIBS = -lpthread	-lb0	-fopenmp -lpython3.8
 
 OBJS	=	b0RemoteApi.o	utils.o	pid.o	kinematicsControllers.o
 
-PROGRAM = meta3_poscontrol	meta3_trajcontrol meta3_pathfollow	plotTest
+PROGRAM = meta3_poscontrol	meta3_trajcontrol meta3_pathfollow
 
 all:	${OBJS}	${PROGRAM}
 

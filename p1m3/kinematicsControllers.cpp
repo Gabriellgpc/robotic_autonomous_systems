@@ -111,13 +111,13 @@ void TrajController::setTrajectory(const double pathCoef[], const double tmax)
 // v(t) = [1 – cos(2pi*t/tmax )].vmax/2
 double TrajController::speedProfile_cos(const double t, const double tmax, const double vmax)
 {
-    return (1.0 - cos(2.0*M_PI*t/tmax))*vmax/2.0;
+    return (1.0 - cos(2.0*M_PIf64*t/tmax))*vmax/2.0;
 }
 
 // v'(t) = [sen(2.t/t max )]..v max /t max
 double TrajController::speedProfile_cos_derivate(const double t, const double tmax, const double vmax)
 {
-    return sin(2*M_PI*t/tmax)*M_PI*vmax/tmax;
+    return sin(2.0*M_PIf64*t/tmax)*M_PIf64*vmax/tmax;
 }
 
 /*
@@ -128,15 +128,15 @@ double TrajController::speedProfile_cos_derivate(const double t, const double tm
 * v : velocidade linear que deve ser aplicada no robo [m/s]
 * w : velocidade angular que deve ser aplicada no robo [rad/s]
 */
-bool TrajController::step(const double currConfig[3], 
-                          const double currVelocity, 
+bool TrajController::step(const double currConfig[], 
+                          double &x, double &y, double &v_l, double &dv_l, double &wc, 
                           double &v, double &w)
 {
     if(!haveTraj)return true;
 
     static double L, l, vmax, dt, t;
-    static double Dx,DDx,Dy,DDy, x, y, th, v_l, dv_l;   //variaveis da trajetoria
-    static double ddxc, ddyc, dv, vc, wc;               //variaveis do controlador
+    static double Dx,DDx,Dy,DDy,th;  //variaveis da trajetoria
+    static double ddxc, ddyc, vc, dv;                   //variaveis do controlador
     static double currTime, prevTime;
     static struct timespec currTime_spec;
 	clock_gettime(CLOCK_MONOTONIC, &currTime_spec);    
@@ -144,8 +144,8 @@ bool TrajController::step(const double currConfig[3],
     currTime = (currTime_spec.tv_sec + currTime_spec.tv_nsec*1e-9);
 
     if(!inited){
-        l = 0;
-        t = 0;
+        l = 0.0;
+        t = 0.0;
         vc= 0.01;
         Dx = coef[1];
         Dy = coef[5];
@@ -157,13 +157,19 @@ bool TrajController::step(const double currConfig[3],
     }
     dt = currTime - prevTime;
     t += dt;
+    prevTime = currTime;
 
     /**** Proxima config. da trajetoria ****/
     dv_l= speedProfile_cos_derivate(t,tmax, vmax);    
     v_l = speedProfile_cos(t, tmax, vmax);
+    
     //lambda(t)
-    l += v_l*dt/sqrt( Dx*Dx + Dy*Dy );
-    //computing x(l),y(l),th(l), dx, dy 
+    // Dx = coef[1] + 2.0*coef[2]*l + 3.0*coef[3]*l*l;
+    // Dy = coef[5] + 2.0*coef[6]*l + 3.0*coef[7]*l*l;
+    
+    l += v_l*dt/sqrt( Dx*Dx + Dy*Dy + 0.001);
+    
+    //computing x(l),y(l),th(l), dx, dy
     double l2 = l*l, l3 = l2*l;  
     x  = coef[0] + coef[1]*l + coef[2]*l2 + coef[3]*l3;
     y  = coef[4] + coef[5]*l + coef[6]*l2 + coef[7]*l3;
@@ -179,13 +185,14 @@ bool TrajController::step(const double currConfig[3],
     // Realimentação PD – Acelerações de Comando
     // x c '' = x * '' + K dx (x * '- x') + K px (x * - x)
     // y c '' = y * '' + K dy (y * '- y') + K py (y * - y)
-    static double dx_curr, dy_curr, x_curr, y_curr, th_curr;
+    static double dx_curr, dy_curr, x_curr, y_curr, th_curr, speed_curr;
     static double dx, dy, ddx, ddy;
     x_curr  = currConfig[0];
     y_curr  = currConfig[1];
     th_curr = currConfig[2];
-    dx_curr = currVelocity*cos(th_curr);    
-    dy_curr = currVelocity*sin(th_curr);
+    dx_curr = currConfig[3];    
+    dy_curr = currConfig[4];
+    speed_curr= sqrt(dx_curr*dx_curr + dy_curr*dy_curr);
 
     dx = v_l*cos(th);
     dy = v_l*sin(th);
@@ -199,7 +206,7 @@ bool TrajController::step(const double currConfig[3],
     // Compensação do Modelo Não Linear
     // printf("l = %.2f : (x*:%.2f , y*: %.2f) | (x*':%.2f , y*': %.2f) | (x*'':%.2f , y*'': %.2f)\n", l, x,y, dx,dy, ddx,ddy);
     dv = ddxc*cos(th_curr) + ddyc*sin(th_curr);
-    wc = (ddyc*cos(th_curr) - ddxc*sin(th_curr))/(currVelocity + 0.01);
+    wc = (ddyc*cos(th_curr) - ddxc*sin(th_curr))/(speed_curr + 0.01);
     
     // integração - Velocidade linear de comando
     vc += dv*dt;
@@ -208,14 +215,14 @@ bool TrajController::step(const double currConfig[3],
     v = vc;
     w = wc;
 
-    prevTime = currTime;
     //tempo maximo atingido
-    if(t >= this->tmax){
+    if((t >= this->tmax) || (l >= 1.0))
+    {
         v = 0.0;
         w = 0.0;
         return true;
     }
-    // printf("t = %0.2f  | lambda = %0.2f | v* = %0.2f | v = %0.2f | w = %0.2f\n", t, l, v_l, v, w);
+    printf("t = %0.2lf  | lambda = %0.2lf | v* = %0.2lf | v = %0.2lf | w = %0.2lf | L = %.2lf | vmax = %.2lf\n", t, l, v_l, v, w, L, vmax);
     
     return false;
 }

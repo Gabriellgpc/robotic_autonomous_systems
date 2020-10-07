@@ -80,7 +80,9 @@ public:
     * v : velocidade linear que deve ser aplicada no robo [m/s]
     * w : velocidade angular que deve ser aplicada no robo [rad/s]
     */
-    bool step(const double currConfig[3], const double currVelocity, double &v, double &w);
+    bool step(const double currConfig[], 
+              double &x, double &y, double &v_l, double &dv_l, double &wc, 
+              double &v, double &w);
     
     //controller reset
     void reset();

@@ -51,7 +51,6 @@ int main(){
     target    = b0RemoteApi::readInt(client.simxGetObjectHandle("Target",client.simxServiceCall()),1);
 
     
-    
     b0RemoteApi::readFloatArray(client.simxGetObjectPosition(pioneer, -1, client.simxServiceCall()), pioneer_pos,1);    
     b0RemoteApi::readFloatArray(client.simxGetObjectPosition(target, -1, client.simxServiceCall()), target_pos,1);
     b0RemoteApi::readFloatArray(client.simxGetObjectOrientation(pioneer, -1, client.simxServiceCall()), pioneer_ori,1);    
@@ -60,7 +59,7 @@ int main(){
     pathComputing(pioneer_pos[0], pioneer_pos[1], pioneer_ori[2], target_pos[0], target_pos[1], target_ori[2], coef);
 
     double K_lin = 2.0;
-    double K_ang = 2.0;
+    double K_ang = 4.0;
     PathFollowController pathfollow(K_ang, K_lin, coef);
 
     // drawing the path
