@@ -1,5 +1,10 @@
 #pragma once
 
+#include <cstdio>   //FILENAME_MAX, printf
+#include <unistd.h> //getcwd
+#define GetCurrentDir getcwd
+char cCurrentPath[FILENAME_MAX];
+
 namespace COLORS{
     const int RED[3]  = {255,0,0};
     const int GREEN[3]= {0,255,0};

@@ -1,6 +1,33 @@
 #include "utils.hpp"
 #include "b0RemoteApi.h"
 
+#include <cmath>
+
+// função que calcula a integral de linha do polinomio de terceiro grau
+// aproximação por serie de Taylor
+double poly3Length(const double coef[], const double l){
+    double a0,a1,a2,a3,b0,b1,b2,b3;
+    a0 = coef[0]; a1 = coef[1]; a2 = coef[2]; a3 = coef[3];
+    b0 = coef[4]; b1 = coef[5]; b2 = coef[6]; b3 = coef[7];
+    double beta1,beta2,beta3;
+
+    beta1 = sqrt(a1*a1 + b1*b1);
+    beta2 = 2.0*(a1*a2 + b1*b2)/(beta1);
+    beta3 = 2.0*(2.0*(a2*a2 + b2*b2) + 3*(a1*a3 + b1*b3))/(beta1) 
+            -4*pow((a1*a2 + b1*b2),2)/((a1*a1 + b1*b1)*beta1);
+
+    return beta1*l + beta2*l*l/2.0 + beta3*l*l*l/6.0;
+}
+
+double curvature(const double coef[], const double l){
+    double Dx = coef[1] + 2*coef[2]*l + 3*coef[3]*l*l;
+    double Dy = coef[5] + 2*coef[6]*l + 3*coef[7]*l*l;
+    double DDx = 2*coef[2] + 6*coef[3]*l;
+    double DDy = 2*coef[6] + 6*coef[7]*l;
+    
+    double kappa = (DDy*Dx - DDx*Dy)/pow( Dx*Dx + Dy*Dy, 3.0/2.0);
+    return fabs(kappa);
+}
 
 void poly3(const double coef[], const double l, float &x, float &y, float &th){
     double l2 = l*l;
@@ -21,7 +48,7 @@ void pathGenerator(const double coef[],const uint32_t numPoints, float x[], floa
     }
 }
 
-void interPoly3(float xi, float yi, float thi, float xf, float yf, float thf, double coef[]){
+void pathComputing(float xi, float yi, float thi, float xf, float yf, float thf, double coef[]){
     const double delta = 0.001;
     double dx = xf - xi;
     double dy = yf - yi;
@@ -80,4 +107,12 @@ void interPoly3(float xi, float yi, float thi, float xf, float yf, float thf, do
         *b2 = 3*(dy - alpha_f*dx) + 2*(alpha_f - alpha_i)*(*a1) + alpha_f*(*a2);
         *b3 = 3*alpha_f*dx - 2*dy - (2*alpha_f - alpha_i)*(*a1) - alpha_f*(*a2);
     }
+}
+
+void pioneer_model(float v, float w, float &w_right, float &w_left)
+{
+    const static float b = 0.331;     //wheel axis distance [m]
+    const static float r = 0.09751;   //wheel radius [m]
+    w_right = (1.0/r)*v + (b/(2.0*r))*w;
+    w_left  = (1.0/r)*v - (b/(2.0*r))*w;
 }

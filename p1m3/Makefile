@@ -11,12 +11,15 @@ LDLIBS = -lpthread	-lb0	-fopenmp -lpython3.8
 
 OBJS	=	b0RemoteApi.o	utils.o	pid.o	kinematicsControllers.o
 
-PROGRAM = meta3	plotTest
+PROGRAM = meta3_poscontrol	meta3_trajcontrol meta3_pathfollow	plotTest
 
-all:	${PROGRAM}	${OBJS}
+all:	${OBJS}	${PROGRAM}
 
-meta3:	meta3.cpp ${OBJS}
+meta3_poscontrol:	meta3_poscontrol.cpp ${OBJS}
 
+meta3_trajcontrol:	meta3_trajcontrol.cpp ${OBJS}
+
+meta3_pathfollow:	meta3_pathfollow.cpp ${OBJS}
 
 pid.o:	pid.hpp	pid.cpp
 
