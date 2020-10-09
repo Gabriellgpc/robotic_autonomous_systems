@@ -23,6 +23,7 @@ int  drawingSphere(const float xc, const float yc, const float zc,
                    const int color[], const float size);
 
 b0RemoteApi* cl = NULL;
+
 int main(){
     std::vector<float> pioneer_pos(3), pioneer_ori(3), pioneer_velocity(3);
     std::vector<float> target_pos(3), target_ori(3);
@@ -53,7 +54,7 @@ int main(){
     target    = b0RemoteApi::readInt(client.simxGetObjectHandle("Target",client.simxServiceCall()),1);
 
     float Kp = 1.0;
-    float Kd = 1.0;
+    float Kd = 0.5;
     TrajController trajcontrol(Kd, Kp);
     
     b0RemoteApi::readFloatArray(client.simxGetObjectPosition(pioneer, -1, client.simxServiceCall()), pioneer_pos,1);    
@@ -63,7 +64,7 @@ int main(){
     
     pathComputing(pioneer_pos[0], pioneer_pos[1], pioneer_ori[2], target_pos[0], target_pos[1], target_ori[2], coef);
 
-    trajcontrol.setTrajectory(coef, 30.0);
+    trajcontrol.setTrajectory(coef, 0.8);
     // drawing the path
     std::vector<float> xps(N), yps(N), thps(N);
     pathGenerator(coef, N, xps.data(), yps.data(), thps.data());
@@ -84,13 +85,11 @@ int main(){
                                      v, w);
         // converte saidas do controlador para velocidades dos motores
         pioneer_model(v, w, w_r, w_l);
-        // pioneer_model(0.4, 0, w_r, w_l);
-        // printf("Velocity: (%.4f, %.4f, %.4f)\n", pioneer_velocity[0], pioneer_velocity[1], pioneer_velocity[2]);
         
-        client.simxSetJointTargetVelocity(rightMotor, w_r, client.simxServiceCall());
-        client.simxSetJointTargetVelocity(leftMotor,  w_l, client.simxServiceCall());
+        // client.simxSetJointTargetVelocity(rightMotor, w_r, client.simxServiceCall());
+        // client.simxSetJointTargetVelocity(leftMotor,  w_l, client.simxServiceCall());
 
-        // plot zone
+        /*******  plot zone *******/ 
         time_vec.push_back(currTime);
         vref_vec.push_back(vref);
         dvref_vec.push_back(dvref);
@@ -114,7 +113,7 @@ int main(){
         plt::subplot(2,1,2);
         plt::named_plot("Path", xps, yps, "-k");
         plt::named_plot("Pos Ref.", xref_vec, yref_vec, "*b");
-        plt::named_plot("Pioneer", x_vec, y_vec, "or");
+        // plt::named_plot("Pioneer", x_vec, y_vec, "or");
         plt::ylabel("y[m]");
         plt::xlabel("x[m]");
         plt::legend();
@@ -124,7 +123,7 @@ int main(){
         plt::pause(0.01);    
         
         if(done){
-            std::cout << "Chegou no alvo!\n";
+            std::cout << "Finished!\n";
             break;
         }
         // usleep(1000*100);

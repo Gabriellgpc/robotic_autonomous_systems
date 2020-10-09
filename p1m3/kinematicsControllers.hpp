@@ -14,7 +14,8 @@ public:
     PathFollowController(const double K_ang,const double K_lin,const double path_coef[]);
 
     bool step(const double x_curr, const double y_curr, const double th_curr,
-              double &u_v, double &u_w,
+              double &v, double &w,
+              double &xref, double &yref, double &thref,
               double &lin_error, double &ang_error);
 
     //update the  parameters
@@ -71,7 +72,7 @@ class TrajController{
 public:
     TrajController(const double _Kd, const double _Kp);
     ~TrajController(){reset();}
-    void setTrajectory(const double pathCoef[], const double tmax);
+    void setTrajectory(const double pathCoef[], const double vmax);
     /*
     * input: 
     * currConfig[3] : {x[m], y[m], theta[rad]}, configuração atual do robo
@@ -102,6 +103,5 @@ private:
     bool inited = false;
     bool haveTraj=false;
     double coef[8]; //parametros que definem o caminho (polinomio de grau 3)
-    double tmax;
-    // bool haveTrajectory = false;
+    double vmax;
 };

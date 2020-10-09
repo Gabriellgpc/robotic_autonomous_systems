@@ -31,22 +31,21 @@ void PathFollowController::update(const double K_ang,
 }
 bool PathFollowController::step(const double x_curr, const double y_curr, const double th_curr,
                                 double &v, double &w,
+                                double &xref, double &yref, double &thref,
                                 double &lin_error, double &ang_error)
 {
     static double u;
-    static double x, y, th, k;  //x, y, theta e curvatura (kappa) no ponto sobre a curva
-    bool end = closestPoint(x_curr, y_curr, x, y, th, k, lin_error);
-    ang_error = th_curr - th;
+    static double k;  //x, y, theta e curvatura (kappa) no ponto sobre a curva
+    bool end = closestPoint(x_curr, y_curr, xref, yref, thref, k, lin_error);
+    ang_error = th_curr - thref;
 
-    u = -(K_ang*ang_error + K_lin*lin_error*v*sin(ang_error)/(ang_error + 0.001));
+    u = -(K_ang*ang_error + K_lin*lin_error*v*sin(ang_error)/(ang_error + 0.01) );
     w = u + k*v*cos(ang_error)/(1.0 - k*lin_error);
     
     if(end){
         v = 0;
         w = 0;
     }
-
-    // printf("l = %.3lf|(xc:%.2lf, yc:%.2lf) | lin_error = %.2lf | ang_error = %.2lf\n", prev_lambda, x, y, lin_error, ang_error);
     return end;
 }
 // retorna o ponto mais proximo
@@ -55,18 +54,18 @@ bool PathFollowController::closestPoint(const double &x_curr, const double &y_cu
                                         double &x, double &y, double &th, double &k,double &mindist)
 {
     // N pontos
-    static const double step = 1.0/200.0;
+    static const double step = 1.0/500.0;
     static double lambda, x_diff, y_diff, dist;
     static float xp, yp, thp;    //x, y, theta no ponto sobre a curva
 
     mindist = 999999;
 
-    for(lambda = this->prev_lambda; lambda <= 1.0; lambda+= step){
+    for(lambda = 0.0; lambda <= 1.0; lambda+= step){
         poly3(coef, lambda, xp, yp, thp);    
         x_diff = xp - x_curr;  y_diff = yp - y_curr;      
         dist = sqrt(x_diff*x_diff + y_diff*y_diff);
         
-        if(dist < mindist){
+        if(dist <= mindist){
            x = xp;
            y = yp;
            th= thp;
@@ -76,7 +75,7 @@ bool PathFollowController::closestPoint(const double &x_curr, const double &y_cu
         }
     }
 
-    if(this->prev_lambda > 0.9)return true;
+    if(this->prev_lambda >= 0.99)return true;
     return false;
 }
 /************************************************************************************************/
@@ -86,7 +85,7 @@ Kd(_Kd),
 Kp(_Kp),
 inited(false),
 haveTraj(false),
-tmax(0)
+vmax(0.0)
 {
     memset(coef, 0, sizeof(coef));
 }
@@ -96,14 +95,14 @@ void TrajController::reset()
     std::memset(coef, 0, 8*sizeof(double));    
     inited = false;
     haveTraj= false;
-    tmax = 0;
+    vmax = 0.0;
 }
 
-void TrajController::setTrajectory(const double pathCoef[], const double tmax)
+void TrajController::setTrajectory(const double pathCoef[], const double vmax)
 {
     reset();
     std::memcpy(coef, pathCoef, 8*sizeof(double));
-    this->tmax = tmax;
+    this->vmax = vmax;
     this->haveTraj=true;
 }
 
@@ -134,7 +133,7 @@ bool TrajController::step(const double currConfig[],
 {
     if(!haveTraj)return true;
 
-    static double L, l, vmax, dt, t;
+    static double L, l, tmax, dt, t;
     static double Dx,DDx,Dy,DDy,th;  //variaveis da trajetoria
     static double ddxc, ddyc, vc, dv;                   //variaveis do controlador
     static double currTime, prevTime;
@@ -144,15 +143,15 @@ bool TrajController::step(const double currConfig[],
     currTime = (currTime_spec.tv_sec + currTime_spec.tv_nsec*1e-9);
 
     if(!inited){
-        l = 0.0;
+        l = 0.01;
         t = 0.0;
         vc= 0.01;
-        Dx = coef[1];
-        Dy = coef[5];
+        Dx = coef[1] + 2.0*coef[2]*l + 3.0*coef[3]*l*l;
+        Dy = coef[5] + 2.0*coef[6]*l + 3.0*coef[7]*l*l;
         //comprimento total do caminho => s(lambda = 1)
         prevTime = currTime;
         L = poly3Length(coef, 1.0);
-        vmax = 2.0*L/tmax;
+        tmax = 2.0*L/vmax;
         inited = true;
     }
     dt = currTime - prevTime;
@@ -164,12 +163,10 @@ bool TrajController::step(const double currConfig[],
     v_l = speedProfile_cos(t, tmax, vmax);
     
     //lambda(t)
-    // Dx = coef[1] + 2.0*coef[2]*l + 3.0*coef[3]*l*l;
-    // Dy = coef[5] + 2.0*coef[6]*l + 3.0*coef[7]*l*l;
-    
-    l += v_l*dt/sqrt( Dx*Dx + Dy*Dy + 0.001);
-    
-    //computing x(l),y(l),th(l), dx, dy
+    double dl = v_l/sqrt( Dx*Dx + Dy*Dy);
+    l += dl*dt;
+    // printf("dt =  %.2lf | t = %.2lf | dl = %.2lf | l = %.2lf\n",dt, t, dl, l);
+    //computing x(l),y(l),th(l), Dx, Dy, DDx and DDy
     double l2 = l*l, l3 = l2*l;  
     x  = coef[0] + coef[1]*l + coef[2]*l2 + coef[3]*l3;
     y  = coef[4] + coef[5]*l + coef[6]*l2 + coef[7]*l3;
@@ -216,13 +213,14 @@ bool TrajController::step(const double currConfig[],
     w = wc;
 
     //tempo maximo atingido
-    if((t >= this->tmax) || (l >= 1.0))
-    {
+    if((t >= tmax) || (l >= 1.0))
+    {   
+        printf("dt =  %.2lf | t = %.2lf  | tmax = %0.2lf | dl = %.2lf | l = %.2lf\n",dt, t, tmax, dl, l);
         v = 0.0;
         w = 0.0;
         return true;
     }
-    printf("t = %0.2lf  | lambda = %0.2lf | v* = %0.2lf | v = %0.2lf | w = %0.2lf | L = %.2lf | vmax = %.2lf\n", t, l, v_l, v, w, L, vmax);
+    // printf("t = %0.2lf  | lambda = %0.2lf | v* = %0.2lf | v = %0.2lf | w = %0.2lf | L = %.2lf | vmax = %.2lf\n", t, l, v_l, v, w, L, vmax);
     
     return false;
 }
