@@ -107,8 +107,11 @@ int main(){
     int lines = drawingPoints(x_path.data(), y_path.data(), 0.01, COLORS::BLUE);
 
     startTime = omp_get_wtime();
+    double tik, tok;
     while(true)
     {   
+        tik = omp_get_wtime();
+
         currTime = omp_get_wtime() - startTime;
         b0RemoteApi::readFloatArray(client.simxGetObjectPosition(pioneer, -1, client.simxServiceCall()), pioneer_pos,1);    
         b0RemoteApi::readFloatArray(client.simxGetObjectPosition(target, -1, client.simxServiceCall()), target_pos,1);
@@ -132,11 +135,11 @@ int main(){
         ang_error_vec.push_back(ang_error);
         lin_error_vec.push_back(lin_error);
 
+        tok = omp_get_wtime();    
         if(finished){
             std::cout << "The end!\n";
             break;
         }
-        // usleep(1000*10);
     }
     
     thr_pyplot.join();
