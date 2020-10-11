@@ -35,7 +35,7 @@ bool finished=false;
 void plotting(){
     while(!finished)
     {   
-        // Clear previous plot
+        //Clear previous plot
         plt::figure(1);
         plt::clf();
         plt::named_plot("Path", x_path, y_path, "-k");
