@@ -232,7 +232,6 @@ bool TrajController::step(const double currConfig[],
     ddyc = ddy + Kd * (dy - dy_curr) + Kp * (y - y_curr);
 
     // Compensação do Modelo Não Linear
-    // printf("l = %.2f : (x*:%.2f , y*: %.2f) | (x*':%.2f , y*': %.2f) | (x*'':%.2f , y*'': %.2f)\n", l, x,y, dx,dy, ddx,ddy);
     dv = ddxc * cos(th_curr) + ddyc * sin(th_curr);
     wc = (ddyc * cos(th_curr) - ddxc * sin(th_curr)) / (speed_curr + 0.01);
 
@@ -243,7 +242,7 @@ bool TrajController::step(const double currConfig[],
     v = vc;
     w = wc;
 
-    //tempo maximo atingido
+    //fim da trajetoria
     if ((t >= tmax) || (l >= 1.0) || (integral_vel >= (L - 0.01)) )
     {
         printf("dt =  %.4lf | t = %.4lf  | tmax = %0.4lf | dl = %.4lf | l = %.4lf | integral(v(t)) = %.4lf | integral(v_robot(t)) = %.4lf |L = %.4lf\n", dt, t, tmax, dl, l, integral_vel, int_vel_robo,L);
@@ -251,7 +250,6 @@ bool TrajController::step(const double currConfig[],
         w = 0.0;
         return true;
     }
-    // printf("t = %0.2lf  | lambda = %0.2lf | v* = %0.2lf | v = %0.2lf | w = %0.2lf | L = %.2lf | vmax = %.2lf\n", t, l, v_l, v, w, L, vmax);
 
     return false;
 }
@@ -277,7 +275,7 @@ PositionController::PositionController(const double lin_Kp, const double lin_Ki,
 */
 
 //distancia minima [m], utilizada como condicao de parada para o controlador de posicao
-#define MIN_DIST 0.10 //[m]
+#define MIN_DIST 0.09 //[m]
 bool PositionController::step(const double x_ref, const double y_ref,
                               const double x_curr, const double y_curr, const double th_curr,
                               double &u_v, double &u_w,

@@ -42,6 +42,8 @@ double currTime;
 
 void plotting()
 {
+    std::vector<float> x_target, y_target;
+
     while (!finished)
     {   
         if(!inited){
@@ -59,10 +61,14 @@ void plotting()
         wl_vec.push_back(w_l);
         wr_vec.push_back(w_r);
         
+        x_target.push_back(target_pos[0]);
+        y_target.push_back(target_pos[1]);
+        
         // Clear previous plot
         plt::figure(1);
         plt::clf();
         plt::named_plot("Pioneer Position", x_vec, y_vec, "-*r");
+        plt::named_plot("Target", x_target, y_target, "*b");
         plt::legend();
         plt::grid(true);
         plt::xlabel("x[m]");
@@ -86,12 +92,27 @@ void plotting()
 
         plt::figure(4);
         plt::clf();
-        plt::named_plot("$\\omega_{left}(t)$", time_vec, wl_vec, "-b");
-        plt::named_plot("$\\omega_{right}(t)$", time_vec, wr_vec, "-g");
+        plt::subplot(2,1,1);
+        plt::named_plot("Angular Error", time_vec, ang_error_vec, "-b");
+        plt::legend();
+        plt::grid(true);    
+        plt::ylabel("[rad]");
+
+        plt::subplot(2,1,2);
+        plt::named_plot("Linear Error", time_vec, lin_error_vec, "-k");
         plt::legend();
         plt::grid(true);
-        plt::ylabel("[rad/s]");
+        plt::ylabel("[m]");
         plt::xlabel("t[s]");
+
+        // plt::figure(5);
+        // plt::clf();
+        // plt::named_plot("$\\omega_{left}(t)$", time_vec, wl_vec, "-b");
+        // plt::named_plot("$\\omega_{right}(t)$", time_vec, wr_vec, "-g");
+        // plt::legend();
+        // plt::grid(true);
+        // plt::ylabel("[rad/s]");
+        // plt::xlabel("t[s]");
 
         plt::pause(0.01);
     }

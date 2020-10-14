@@ -7,9 +7,12 @@
 // função que calcula a integral de linha do polinomio de terceiro grau
 // aproximação por serie de Taylor
 double poly3Length(const double coef[], const double l){
+    const double NumPoints = 1000.0; //dlambda
+    double integral = 0.0, Dx, Dy;
     double a0,a1,a2,a3,b0,b1,b2,b3;
     a0 = coef[0]; a1 = coef[1]; a2 = coef[2]; a3 = coef[3];
     b0 = coef[4]; b1 = coef[5]; b2 = coef[6]; b3 = coef[7];
+    /*
     double beta1,beta2,beta3;
 
     beta1 = sqrt(a1*a1 + b1*b1);
@@ -18,6 +21,15 @@ double poly3Length(const double coef[], const double l){
             -4*pow((a1*a2 + b1*b2),2)/((a1*a1 + b1*b1)*beta1);
 
     return beta1*l + beta2*l*l/2.0 + beta3*l*l*l/6.0;
+    */
+    double dlambda = 1.0/NumPoints;
+    for(double lambda = 0.0; lambda < l; lambda += dlambda){
+        Dx = a1 + 2.0*a2*lambda + 3.0*a3*lambda*lambda;
+        Dy = b1 + 2.0*b2*lambda + 3.0*b3*lambda*lambda;
+        integral += sqrt(Dx*Dx + Dy*Dy) * dlambda;
+    }    
+
+    return integral;
 }
 
 double curvature(const double coef[], const double l){

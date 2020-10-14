@@ -130,10 +130,13 @@ int main(){
     
     pathComputing(pioneer_pos[0], pioneer_pos[1], pioneer_ori[2], target_pos[0], target_pos[1], target_ori[2], coef);
 
-    double K_lin = 0.1; //0.5
-    double K_ang = 1.0; //3.0
+    double K_lin = 0.1;
+    double K_ang = 1.0;
     PathFollowController pathfollow(K_ang, K_lin, coef);
 
+
+    printf("Path Parameters:\n a0 = %.4lf \n a1 = %.4lf \n a2 = %.4lf \n a3 = %.4lf \n b0 = %.4lf \n b1 = %.4lf \n b2 = %.4lf \n b3 = %.4lf\n",
+           coef[0], coef[1], coef[2], coef[3], coef[4], coef[5], coef[6], coef[7]);
     // drawing the path
     pathGenerator(coef, N, x_path.data(), y_path.data(), th_path.data());
     int lines = drawingPoints(x_path.data(), y_path.data(), 0.01, COLORS::BLUE);
