@@ -23,18 +23,40 @@ int  drawingPoints(const float x[], const float y[], const float z, const int co
 int  drawingSphere(const float xc, const float yc, const float zc, 
                    const int color[], const float size);
 
+char cCurrentPath[FILENAME_MAX];
 std::vector<float> pioneer_pos(3), pioneer_ori(3);
 std::vector<float> target_pos(3), target_ori(3);
 std::vector<float> time_vec, ang_error_vec, lin_error_vec;
 std::vector<float> wl_vec, wr_vec;
-std::vector<float> vel_vec;
+std::vector<float> v_vec, w_vec;
 std::vector<float> x_path(N), y_path(N), th_path(N);
 std::vector<float> x_vec, y_vec, xref_vec, yref_vec;
-bool finished=false;
+float pioneer_velocity;
+int pioneer, leftMotor, rightMotor, target;
+double v, w, xref, yref, th_ref;
+double currTime, startTime;
+double coef[NUM_PARAMETERS], ang_error, lin_error;
+float w_l, w_r; //velocidade angular(w [rad/s]) das rodas esquerda e direita
+bool finished=false, inited = false;
 
 void plotting(){
     while(!finished)
     {   
+        if(!inited){
+            std::this_thread::yield();
+            continue;
+        }
+        // salva variaveis para plotar
+        time_vec.push_back(currTime);
+        x_vec.push_back(pioneer_pos[0]);
+        y_vec.push_back(pioneer_pos[1]);
+        xref_vec.push_back(xref);
+        yref_vec.push_back(yref);
+        ang_error_vec.push_back(ang_error);
+        lin_error_vec.push_back(lin_error);
+        v_vec.push_back(v);
+        w_vec.push_back(w);
+
         //Clear previous plot
         plt::figure(1);
         plt::clf();
@@ -61,6 +83,23 @@ void plotting(){
         plt::ylabel("[m]");
         plt::xlabel("t[s]");
 
+        plt::figure(3);
+        plt::clf();
+        plt::subplot(2, 1, 1);
+        plt::named_plot("Linear Velocity", time_vec, v_vec, "-b");
+        plt::title("V(t) and W(t)");
+        plt::legend();
+        plt::grid(true);
+        plt::ylabel("[m/s]");
+
+        plt::subplot(2, 1, 2);
+        plt::named_plot("Angular Velocity", time_vec, w_vec, "-k");
+        plt::legend();
+        plt::grid(true);
+        plt::ylabel("[rad]");
+        plt::xlabel("t[s]");
+
+
         plt::pause(0.01);
     }
     plt::show();
@@ -69,13 +108,6 @@ void plotting(){
 b0RemoteApi* cl = NULL;
 int main(){
     std::thread thr_pyplot(plotting);
-
-    float pioneer_velocity;
-    int pioneer, leftMotor, rightMotor, target;
-    double v, w, xref, yref, th_ref;
-    double currTime, startTime;
-    double coef[NUM_PARAMETERS], ang_error, lin_error;
-    float w_l, w_r; //velocidade angular(w [rad/s]) das rodas esquerda e direita
     
     b0RemoteApi client("b0RemoteApi_CoppeliaSim-addOn","b0RemoteApiAddOn");
     bool r = GetCurrentDir(cCurrentPath, sizeof(cCurrentPath));
@@ -126,16 +158,10 @@ int main(){
         client.simxSetJointTargetVelocity(rightMotor, w_r, client.simxServiceCall());
         client.simxSetJointTargetVelocity(leftMotor,  w_l, client.simxServiceCall());
 
-        // salva variaveis para plotar
-        time_vec.push_back(currTime);
-        x_vec.push_back(pioneer_pos[0]);
-        y_vec.push_back(pioneer_pos[1]);
-        xref_vec.push_back(xref);
-        yref_vec.push_back(yref);
-        ang_error_vec.push_back(ang_error);
-        lin_error_vec.push_back(lin_error);
-
-        tok = omp_get_wtime();    
+        tok = omp_get_wtime();
+        
+        if(!inited)
+            inited = true;    
         if(finished){
             std::cout << "The end!\n";
             break;

@@ -1,5 +1,6 @@
 #include "utils.hpp"
 #include "b0RemoteApi.h"
+#include "common.hpp"
 
 #include <cmath>
 
@@ -43,7 +44,12 @@ void pathGenerator(const double coef[],const uint32_t numPoints, float x[], floa
     double l = 0, step_l = 1.0/numPoints;
     for(int i = 0; i < numPoints; i++)
     {   
-        poly3(coef,l,x[i], y[i], th[i]);
+        #ifdef CIRCULAR_PATH
+            x[i] = 4.0*cos(2.0*M_PIf64*l);
+            y[i] = 4.0*sin(2.0*M_PIf64*l);
+        #else
+            poly3(coef,l,x[i], y[i], th[i]);
+        #endif
         l += step_l;
     }
 }

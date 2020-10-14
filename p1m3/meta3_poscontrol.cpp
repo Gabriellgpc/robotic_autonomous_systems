@@ -24,7 +24,8 @@ namespace plt = matplotlibcpp;
 #define Ki_ang 0.15
 #define Kd_ang 0.0
 
-bool finished = false;
+bool finished = false, inited = false;
+char cCurrentPath[FILENAME_MAX];
 std::vector<float> pioneer_pos(3);
 std::vector<float> pioneer_ori(3);
 std::vector<float> target_pos(3);
@@ -43,6 +44,10 @@ void plotting()
 {
     while (!finished)
     {   
+        if(!inited){
+            std::this_thread::yield();
+            continue;
+        }
         // data update
         time_vec.push_back(currTime);
         x_vec.push_back(pioneer_pos[0]);
@@ -57,31 +62,17 @@ void plotting()
         // Clear previous plot
         plt::figure(1);
         plt::clf();
-        plt::named_plot("Pioneer", x_vec, y_vec, "-*r");
+        plt::named_plot("Pioneer Position", x_vec, y_vec, "-*r");
         plt::legend();
         plt::grid(true);
         plt::xlabel("x[m]");
         plt::ylabel("y[m]");
 
-        plt::figure(2);
-        plt::clf();
-        plt::subplot(2, 1, 1);
-        plt::named_plot("Angular Error", time_vec, ang_error_vec, "-b");
-        plt::legend();
-        plt::grid(true);
-        plt::ylabel("[rad]");
-
-        plt::subplot(2, 1, 2);
-        plt::named_plot("Linear Error", time_vec, lin_error_vec, "-k");
-        plt::legend();
-        plt::grid(true);
-        plt::ylabel("[m]");
-        plt::xlabel("t[s]");
-
         plt::figure(3);
         plt::clf();
         plt::subplot(2, 1, 1);
         plt::named_plot("Linear Velocity", time_vec, v_vec, "-b");
+        plt::title("V(t) and W(t)");
         plt::legend();
         plt::grid(true);
         plt::ylabel("[m/s]");
@@ -147,6 +138,8 @@ int main()
         client.simxSetJointTargetVelocity(rightMotor, w_r, client.simxServiceCall());
         client.simxSetJointTargetVelocity(leftMotor, w_l, client.simxServiceCall());
 
+        if(!inited)
+            inited = true;
         if(finished)
         {
             std::cout << "The end!\n";

@@ -136,6 +136,8 @@ bool TrajController::step(const double currConfig[],
     if (!haveTraj)
         return true;
 
+    #define R 4.0
+
     static double L, l, tmax, dt, t;
     static double Dx, DDx, Dy, DDy, th; //variaveis da trajetoria
     static double ddxc, ddyc, vc, dv;   //variaveis do controlador
@@ -151,11 +153,18 @@ bool TrajController::step(const double currConfig[],
         l = 0.0;
         t = 0.0;
         vc = 0.01;
+        // circle
+        #ifdef CIRCULAR_PATH
+        L = 2.0*M_PIf64*R;
+        #else
+        // poly 3
         Dx = coef[1] + 2.0 * coef[2] * l + 3.0 * coef[3] * l * l;
         Dy = coef[5] + 2.0 * coef[6] * l + 3.0 * coef[7] * l * l;
+        L = poly3Length(coef, 1.0);
+        #endif
+        
         //comprimento total do caminho => s(lambda = 1)
         prevTime = currTime;
-        L = poly3Length(coef, 1.0);
         tmax = 2.0 * L / vmax;
         inited = true;
     }
@@ -168,13 +177,26 @@ bool TrajController::step(const double currConfig[],
     dv_l = speedProfile_cos_derivate(t, tmax, vmax);
     v_l = speedProfile_cos(t, tmax, vmax);
 
-    integral_vel += v_l * dt;
+    #ifdef CIRCULAR_PATH
+    //circle
+    double dl = v_l * dt / (2.0*M_PIf64*R);
+    l += dl;
+
+    x = R*cos(2.0*M_PIf64*l);
+    y = R*sin(2.0*M_PIf64*l);
+    Dx = -2.0*M_PIf64*sin(2.0*M_PIf64*l);
+    Dy = 2.0*M_PIf64*cos(2.0*M_PIf64*l);
+    th = atan2(Dy, Dx);
+    //computing  d2x, d2y and W
+    DDx = -4.0*M_PIf64*M_PIf64*cos(2.0*M_PIf64*l);
+    DDy = -4.0*M_PIf64*M_PIf64*sin(2.0*M_PIf64*l);
+    #else
     //lambda(t)
-    double dl = v_l * dt / sqrt(Dx * Dx + Dy * Dy);
-    // l += dl;
-    l = integral_vel/L;
-    // printf("dt =  %.5lf | t = %.5lf | dl = %.5lf | l = %.5lf | Dx = %.5lf | Dy = %.5lf\n",dt, t, dl, l, Dx, Dy);
-    //computing x(l),y(l),th(l), Dx, Dy, DDx and DDy
+    // double dl = v_l * dt / sqrt(Dx * Dx + Dy * Dy);
+    double dl = v_l*dt/L;
+    l += dl;
+     //computing x(l),y(l),th(l), Dx, Dy, DDx and DDy
+    //poly 3
     double l2 = l * l, l3 = l2 * l;
     x = coef[0] + coef[1] * l + coef[2] * l2 + coef[3] * l3;
     y = coef[4] + coef[5] * l + coef[6] * l2 + coef[7] * l3;
@@ -184,7 +206,7 @@ bool TrajController::step(const double currConfig[],
     //computing  d2x, d2y and W
     DDx = 2.0 * coef[2] + 6.0 * coef[3] * l;
     DDy = 2.0 * coef[6] + 6.0 * coef[7] * l;
-
+    #endif
     /**** Controle da Trajetoria ****/
 
     // Realimentação PD – Acelerações de Comando
@@ -223,7 +245,7 @@ bool TrajController::step(const double currConfig[],
     w = wc;
 
     //tempo maximo atingido
-    if ((t >= tmax) || (l >= 1.0))
+    if ((t >= tmax) || (l >= 1.0) || (integral_vel >= (L - 0.1)) )
     {
         printf("dt =  %.4lf | t = %.4lf  | tmax = %0.4lf | dl = %.4lf | l = %.4lf | integral(v(t)) = %.4lf | integral(v_robot(t)) = %.4lf |L = %.4lf\n", dt, t, tmax, dl, l, integral_vel, int_vel_robo,L);
         v = 0.0;

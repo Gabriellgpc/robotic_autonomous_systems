@@ -17,9 +17,9 @@
 using namespace std;
 namespace plt = matplotlibcpp;
 
-#define Kp 0.2
-#define Kd 0.55
-#define VMAX 0.4
+#define Kp 0.8 // 1.0
+#define Kd 0.8 // 0.2
+#define VMAX 0.5
 #define N 200 //quantidade de pontos gerados em um caminho
 
 int drawingPoints(const float x[], const float y[], const float z, const int color[]);
@@ -27,7 +27,7 @@ int drawingSphere(const float xc, const float yc, const float zc,
                   const int color[], const float size);
 
 b0RemoteApi *cl = NULL;
-
+char cCurrentPath[FILENAME_MAX];
 std::vector<float> time_vec, ang_error_vec, lin_error_vec;
 std::vector<float> wl_vec, wr_vec;
 std::vector<float> x_path(N), y_path(N), th_path(N);
@@ -69,9 +69,9 @@ void plotting()
         plt::figure(1);
         plt::clf();
         plt::named_plot("Velocity Ref.", time_vec, vref_vec, "-k");
-        // plt::named_plot("Aceleration", time_vec, dvref_vec, "--k");
         plt::named_plot("Velocity", time_vec, v_vec, "-b");
         plt::legend();
+        plt::ylabel("[m/s]");
         plt::xlabel("t[s]");
         plt::grid(true);
 
@@ -99,7 +99,11 @@ int main()
     bool r = GetCurrentDir(cCurrentPath, sizeof(cCurrentPath));
     if (!r)
         std::cerr << "Falha ao carregar o cenário!\n";
+    #ifndef CIRCULAR_PATH
     std::string scene = string(cCurrentPath) + string("/scenes/trajcontrol.ttt");
+    #else
+    std::string scene = string(cCurrentPath) + string("/scenes/circular_trajcontrol.ttt");
+    #endif
     client.simxLoadScene(scene.c_str(), client.simxServiceCall());
     client.simxStartSimulation(client.simxServiceCall());
     std::cout << "Conectado!\n";
@@ -133,7 +137,6 @@ int main()
     {
         currTime = omp_get_wtime() - startTime;
         b0RemoteApi::readFloatArray(client.simxGetObjectPosition(pioneer, -1, client.simxServiceCall()), pioneer_pos, 1);
-        // b0RemoteApi::readFloatArray(client.simxGetObjectPosition(target, -1, client.simxServiceCall()), target_pos, 1);
         b0RemoteApi::readFloatArray(client.simxGetObjectOrientation(pioneer, -1, client.simxServiceCall()), pioneer_ori, 1);
         b0RemoteApi::readFloatArray(client.simxGetObjectVelocity(pioneer, client.simxServiceCall()), pioneer_velocity, 1);
 
@@ -143,7 +146,6 @@ int main()
                                     v, w);
         // converte saidas do controlador para velocidades dos motores
         pioneer_model(v, w, w_r, w_l);
-        // printf("Vx = %.4lf | Vy = %.4lf | |V| = %.4lf\n", pioneer_velocity[0], pioneer_velocity[1] , sqrt(pow(pioneer_velocity[0],2)+pow(pioneer_velocity[1],2)));
 
         if(!inited)inited=true;
         client.simxSetJointTargetVelocity(rightMotor, w_r, client.simxServiceCall());

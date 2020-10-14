@@ -1,5 +1,6 @@
 #pragma once
 #include "pid.hpp"
+#include "common.hpp"
 
 // Seguidor de Caminho [Samson]
 // Descrição do robô em relação ao caminho:
@@ -52,7 +53,6 @@ public:
               const double x_curr, const double y_curr, const double th_curr,
               double &u_v, double &u_w,
               double &lin_error, double &ang_error);
-    
     //reset to PID controllers
     void reset();
 
@@ -70,6 +70,8 @@ private:
 // Não Linear.
 class TrajController{
 public:
+    enum TRAJ_TYPE{POLY3 = 0, CIRCLE = 1};
+
     TrajController(const double _Kd, const double _Kp);
     ~TrajController(){reset();}
     void setTrajectory(const double pathCoef[], const double vmax);
@@ -93,11 +95,6 @@ public:
     double speedProfile_cos(const double t, const double tmax, const double vmax);
 
     double speedProfile_cos_derivate(const double t, const double tmax, const double vmax);
-
-    void trajectoryGenerator(const double coef[], const double t, double &l,
-                             double &x, double &y,
-                             double &dx, double &dy,
-                             double &d2x, double &d2y);
 private:
     double Kd, Kp;
     bool inited = false;
