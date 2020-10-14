@@ -6,7 +6,7 @@
 #include <unistd.h> //getcwd
 #define GetCurrentDir getcwd
 
-#define CIRCULAR_PATH
+// #define CIRCULAR_PATH
 
 namespace COLORS{
     const int RED[3]  = {255,0,0};

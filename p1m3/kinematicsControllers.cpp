@@ -192,10 +192,9 @@ bool TrajController::step(const double currConfig[],
     DDy = -4.0*M_PIf64*M_PIf64*sin(2.0*M_PIf64*l);
     #else
     //lambda(t)
-    // double dl = v_l * dt / sqrt(Dx * Dx + Dy * Dy);
-    double dl = v_l*dt/L;
+    double dl = v_l * dt / sqrt(Dx * Dx + Dy * Dy);
     l += dl;
-     //computing x(l),y(l),th(l), Dx, Dy, DDx and DDy
+    //computing x(l),y(l),th(l), Dx, Dy, DDx and DDy
     //poly 3
     double l2 = l * l, l3 = l2 * l;
     x = coef[0] + coef[1] * l + coef[2] * l2 + coef[3] * l3;
@@ -245,7 +244,7 @@ bool TrajController::step(const double currConfig[],
     w = wc;
 
     //tempo maximo atingido
-    if ((t >= tmax) || (l >= 1.0) || (integral_vel >= (L - 0.1)) )
+    if ((t >= tmax) || (l >= 1.0) || (integral_vel >= (L - 0.01)) )
     {
         printf("dt =  %.4lf | t = %.4lf  | tmax = %0.4lf | dl = %.4lf | l = %.4lf | integral(v(t)) = %.4lf | integral(v_robot(t)) = %.4lf |L = %.4lf\n", dt, t, tmax, dl, l, integral_vel, int_vel_robo,L);
         v = 0.0;
