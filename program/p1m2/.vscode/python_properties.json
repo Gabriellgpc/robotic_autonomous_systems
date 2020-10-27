@@ -1,0 +1,12 @@
+{
+    "configurations": [
+        {
+            "name": "Linux",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "${HOME}/CoppeliaSim_Edu_V4_1_0_Ubuntu20_04/programming/**"
+            ]
+        }
+    ],
+    "version": 4
+}
