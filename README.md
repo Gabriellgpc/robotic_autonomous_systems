@@ -1,4 +1,4 @@
-# Sistemas_Roboticos_Autonomos_pos
+# Sistemas Roboticos Autonomos
 Repositório para o material desenvolvido durante o curso de Sistemas Robóticos Autônomos (Pós de elétrica e computação)
 
 # Dependências
