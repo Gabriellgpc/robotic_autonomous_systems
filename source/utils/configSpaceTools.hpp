@@ -6,7 +6,7 @@
 class Vector2D{
 public:
     Vector2D();
-    Vector2D(const double _x, const double _y);
+    Vector2D(const double x, const double y);
     Vector2D(const Vector2D &other);
 
     Vector2D operator-()const;
@@ -16,20 +16,26 @@ public:
     
     bool operator==(const Vector2D &other)const;
 
-    double x()const;
-    double y()const;
+    inline double x()const{return _x;}
+    inline double y()const{return _y;}
+    double operator()(unsigned int i)const;
+    double operator[](unsigned int i)const;
+    double &operator[](unsigned int i);
     double norm()const;
     double dot(const Vector2D &other)const;
     //retorna o angulo (theta) do vetor com relação ao eixo x positivo. theta in [0, 2pi]
     double ang()const;
+    double ang(const Vector2D &other)const;
+    Vector2D translate(const Vector2D &trans)const; //[m]
+    Vector2D rotation(const double &theta)const;    //[rad]
     
     void operator=(const Vector2D &other);
     void normalize();
     void translate(const Vector2D &trans); //[m]
     void rotation(const double &theta);   //[rad]
 private:
-    double x;
-    double y;
+    double _x;
+    double _y;
 };
 
 class Polygon2D{
@@ -37,12 +43,11 @@ public:
     Polygon2D();
     ~Polygon2D();
     
-    Polygon2D(std::list<Vector2D> _vertices);
-    void add_vertex(const Vector2D _vertex);
+    Polygon2D(std::list<Vector2D> vertices);
+    void add_vertex(const Vector2D vertex);
 
     Polygon2D work_to_config_space(const Robot &robot)const;
     //retorna o poligono resultante da translação do atual poligono
-    Polygon2D translate(const double &x, const double &y)const; //[m]
     Polygon2D translate(const Vector2D &trans)const; //[m]
     //retorna o poligono resultante da rotação do atual poligono em theta radianos
     Polygon2D rotation(const double &theta)const;   //[rad]
@@ -52,6 +57,7 @@ public:
     std::list<Vector2D> get_vertices()const;
 
     double penetration_test(const Vector2D &p)const;
+    double distance(const Polygon2D &polygon)const;
     //retorna true caso tenha sobreposição entre os poligonos (entre this e other)
     bool check_overlay(const Polygon2D other)const;
 
