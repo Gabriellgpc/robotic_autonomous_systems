@@ -19,5 +19,4 @@ all:	${PROGRAM}
 p2m1:	p2m1.hpp p2m1.cpp
 
 clean:
-	rm *.o
 	rm ${PROGRAM}
