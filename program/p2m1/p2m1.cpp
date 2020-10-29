@@ -8,6 +8,8 @@
 #include <cmath>
 #include <string>
 
+#include <omp.h>
+
 using namespace std;
 namespace plt = matplotlibcpp;
 
@@ -19,22 +21,63 @@ int main(int argc, char** argv)
 {   
     std::list<Polygon2D> obstacles;
     Polygon2D polygon;
-    Robot robot;
+    Robot robot(Config(),Polygon2D::circle_to_polygon2D(1.0, 8));
+    World W(robot);
+    double tik,tok;
 
-    robot.my_shape = Polygon2D::circle_to_polygon2D(1.0, 32);
-    Polygon2D b0 = Polygon2D::rectangle_to_polygon2D(4.0, 4.0);
-    b0 = b0.translate(Vector2D(-6.0,0.0));
+    polygon = Polygon2D::rectangle_to_polygon2D(Vector2D(-10,0), 5.0, 5.0);
 
-    Polygon2D cb0 = b0.work_to_config_space(robot);
+    plotPolygon(polygon, "B0", 1, false);
+    plotPolygon(robot.get_shape(), "Robot", 1, false);
+
+    W.add_obstacle(polygon);
+
+    polygon = Polygon2D::rectangle_to_polygon2D(Vector2D(10,0), 5.0, 5.0);
     
-    plotPolygon(b0, "B0", 1, false);
-    plotPolygon(robot.my_shape, "Robot", 1, false);
-    
-    plotPolygon(cb0, "CB0", 2, false);
-    Polygon2D point;
-    point.add_vertex(Vector2D());
-    plotPolygon(point, "Robot", 2, true);
+    plotPolygon(polygon, "B1", 1, false);
 
+    W.add_obstacle(polygon);
+
+    polygon = Polygon2D::circle_to_polygon2D(2.0, 8);
+    polygon = polygon.rotation(M_PI/5.0);
+    polygon = polygon.translate(Vector2D(0, 10.0));
+    
+    plotPolygon(polygon, "B2", 1, false);
+
+    W.add_obstacle(polygon);
+
+    tik = omp_get_wtime();
+    W.compute_c_obstacles(400);
+    tok = omp_get_wtime();
+    std::cout << "Tempo para computar o CB-obstaculo:" << tok - tik << "s\n";
+
+    double step_angle = 2.0*M_PI/400;
+    for(int i = 2; i < 400; i+=25)
+    {
+        W.update_config(Config(robot.get_config().get_pos(), step_angle*i));
+
+        auto cb_obstacles = W.get_cobstacles();
+        int bi = 0;
+        for(auto cb_it = cb_obstacles.begin(); cb_it != cb_obstacles.end(); cb_it++)
+        {
+            plotPolygon(*cb_it, "CB"+std::to_string(bi++), 2, false);
+        }
+        polygon = Polygon2D();
+        polygon.add_vertex(robot.get_config().get_pos());
+        plotPolygon(polygon, "Robot", 2, false);
+        plt::pause(0.01);
+        usleep(20.0*1000.0);
+        plt::clf();
+    }
+    auto cb_obstacles = W.get_cobstacles();
+    int bi = 0;
+    for(auto cb_it = cb_obstacles.begin(); cb_it != cb_obstacles.end(); cb_it++)
+    {
+        plotPolygon(*cb_it, "CB"+std::to_string(bi++), 2, false);
+    }
+    polygon = Polygon2D();
+    polygon.add_vertex(robot.get_config().get_pos());
+    plotPolygon(polygon, "Robot", 2, true);
 
     /* Calculo de distancia entre poligonos está falhando ainda
     polygon = Polygon2D::rectangle_to_polygon2D(2.0, 2.0);
@@ -117,6 +160,8 @@ void plotPolygon(const Polygon2D &polygon, std::string name, int fig, bool show)
     polygon_to_vectorsXY(polygon, vertices_x, vertices_y);
 
     plt::figure(fig);
+    if(polygon.get_vertices().size() == 1.0)
+        plt::named_plot(name, vertices_x, vertices_y, "o");
     plt::named_plot(name, vertices_x, vertices_y, "-");
     plt::axis("equal");
     plt::annotate(name, vertices_x.back(), vertices_y.back());
@@ -134,6 +179,10 @@ void polygon_to_vectorsXY(const Polygon2D &polygon, std::vector<double> &vertice
         vertices_x.push_back(it->x());
         vertices_y.push_back(it->y());
     }
-    vertices_x.push_back( vertices.front().x() );
-    vertices_y.push_back( vertices.front().y() );
+
+    if(vertices.size() > 1.0)
+    {
+        vertices_x.push_back( vertices.front().x() );
+        vertices_y.push_back( vertices.front().y() );
+    }
 }

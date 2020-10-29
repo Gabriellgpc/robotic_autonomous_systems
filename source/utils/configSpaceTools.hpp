@@ -1,6 +1,8 @@
 #pragma once
 #include <list>
 #include <tuple>
+#include <iostream>
+#include <string>
 
 class Config;
 class Robot;
@@ -50,7 +52,7 @@ public:
     Polygon2D(std::list<Vector2D> vertices);
     void add_vertex(const Vector2D vertex);
 
-    Polygon2D work_to_config_space(const Robot &robot)const;
+    Polygon2D work_to_config_space(const Polygon2D &robot)const;
     //retorna o poligono resultante da translação do atual poligono
     Polygon2D translate(const Vector2D &trans)const; //[m]
     //retorna o poligono resultante da rotação do atual poligono em theta radianos
@@ -76,14 +78,37 @@ public:
     static Polygon2D rectangle_to_polygon2D(const Vector2D &p1, const Vector2D &p2);
     static Polygon2D rectangle_to_polygon2D(const Vector2D &center, const double &width, const double height);
     static Polygon2D rectangle_to_polygon2D(const double &width, const double height);
+
+    void load_from_istream(std::istream &I);
+    std::ostream &save_to_ostream(std::ostream &O)const;
+    bool save_to_file(const std::string fileName);
+    bool load_from_file(const std::string fileName);
 private:
     std::list<Vector2D> my_vertices;
 };
+void operator>>(std::istream &I, Polygon2D &polygon);
+std::ostream &operator<<(std::ostream &O, const Polygon2D &polygon);
+bool operator<(std::tuple<Vector2D, Vector2D, bool> A, std::tuple<Vector2D, Vector2D, bool> B);
+bool operator==(std::tuple<Vector2D, Vector2D, bool> A, bool flag);
+
+/***************************************************************************************************************/
 
 class Config{
 public:
     Config();
+    Config(const double &x, const double &y, const double &theta);
+    Config(const Vector2D &pos, const double& theta);
 
+    void set_pos(const double &x, const double &y);
+    void set_pos(const Vector2D &pos);
+    void set_theta(const double &theta);
+    void translate(const Vector2D &t);
+    void rotate(const double &phi);
+
+
+    Vector2D get_pos()const;
+    double   get_theta()const;
+private:
     Vector2D my_pos;
     double  my_theta;
 };
@@ -91,7 +116,49 @@ public:
 class Robot{
 public:
     Robot();
+    Robot(const Robot &robot);
+    Robot(const double &x, const double &y, const double &theta, const Polygon2D &shape);
+    Robot(const Config &config, const Polygon2D &shape);
+    Robot(const Vector2D &pos, const double &theta, const Polygon2D &shape);
 
+    void set_config(const Config &config);
+    void translate(const Vector2D &t);
+    void rotate(const double &phi);
+    
+    Polygon2D to_polygon2D();
+    Config get_config()const;
+    Polygon2D get_shape()const;
+private:
     Polygon2D my_shape;
     Config my_config;
+};
+
+/***************************************************************************************************************/
+
+class World{
+public:
+    World(std::list<Polygon2D> &obstacles, const Robot &robot);
+    World(const Robot &robot);
+    ~World();
+
+    void add_obstacle(const Polygon2D &obstacle);
+    void update_config(const Config &config);
+
+    Robot get_robot()const;
+    std::list<Polygon2D> get_obstacles()const;
+    std::list<Polygon2D> get_cobstacles(const unsigned int n_samples=100);
+
+    void compute_c_obstacles(const unsigned int n_samples = 100);
+    void remove_all_obstacles();
+    void set_robot(const Robot &robot);
+
+    bool check_collision();
+
+    void load_world_from_file(const std::string &fileName);
+    void save_world_to_file(const std::string fileName)const;
+private:
+    std::list<Polygon2D> my_obstacles;
+    std::list<Polygon2D> *my_CBs;//theta 0 to 2pi
+    unsigned int my_n_samples;
+    Robot my_robot;
 };

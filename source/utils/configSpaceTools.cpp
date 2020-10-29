@@ -2,19 +2,104 @@
 #include <cmath>
 #include <tuple>     //tuple
 #include <algorithm> //find
-#include <limits>       // std::numeric_limits]
-
-#include <stdio.h>
-#include <iostream>
+#include <limits>    // std::numeric_limits]
+#include <fstream>   //ifstream, ofstream
 
 Config::Config() : my_pos(),
                    my_theta(0.0)
 {
 }
+Config::Config(const double &x, const double &y, const double &theta) : my_pos(x, y),
+                                                                        my_theta(theta)
+{
+}
+Config::Config(const Vector2D &pos, const double &theta) : my_pos(pos),
+                                                           my_theta(theta)
+{
+}
+void Config::set_pos(const double &x, const double &y)
+{
+    my_pos = Vector2D(x, y);
+}
+void Config::set_pos(const Vector2D &pos)
+{
+    my_pos = pos;
+}
+void Config::set_theta(const double &theta)
+{
+    my_theta = theta;
+}
+void Config::translate(const Vector2D &t)
+{
+    my_pos = my_pos + t;
+}
+void Config::rotate(const double &phi)
+{
+    my_theta += phi;
+    if (my_theta >= 2.0 * M_PI)
+        my_theta -= 2.0 * M_PI;
+}
+Vector2D Config::get_pos() const
+{
+    return my_pos;
+}
+double Config::get_theta() const
+{
+    return my_theta;
+}
+
 Robot::Robot() : my_config(),
                  my_shape()
 {
 }
+Robot::Robot(const Robot &robot)
+{
+    my_config = robot.my_config;
+    my_shape = robot.my_shape;
+}
+Robot::Robot(const double &x, const double &y, const double &theta, const Polygon2D &shape) : my_config(x, y, theta),
+                                                                                              my_shape(shape)
+{
+}
+Robot::Robot(const Config &config, const Polygon2D &shape) : my_config(config),
+                                                             my_shape(shape)
+{
+}
+Robot::Robot(const Vector2D &pos, const double &theta, const Polygon2D &shape) : my_config(pos, theta),
+                                                                                 my_shape(shape)
+{
+}
+void Robot::set_config(const Config &config)
+{
+    my_config = config;
+}
+
+void Robot::translate(const Vector2D &t)
+{
+    my_config.translate(t);
+}
+void Robot::rotate(const double &phi)
+{
+    my_config.rotate(phi);
+}
+
+Polygon2D Robot::to_polygon2D()
+{
+    Polygon2D polygon;
+    polygon = my_shape.rotation(my_config.get_theta());
+    polygon = polygon.translate(my_config.get_pos());
+    return polygon;
+}
+Config Robot::get_config() const
+{
+    return my_config;
+}
+
+Polygon2D Robot::get_shape()const
+{
+    return my_shape;
+}
+
 /*********************************************************** Vector2D ***********************************************************/
 
 Vector2D::Vector2D() : _x(0.0),
@@ -78,10 +163,10 @@ double Vector2D::dot(const Vector2D &other) const
 double Vector2D::ang() const
 {
     double ang = atan2(this->_y, this->_x); //[-pi, pi]
-    if(fabs(ang) < 1.0e-9)
+    if (fabs(ang) < 1.0e-9)
         return 0.0;
-    if(ang < 0.0)
-        ang += 2*M_PI;
+    if (ang < 0.0)
+        ang += 2 * M_PI;
     return ang;
 }
 double Vector2D::ang(const Vector2D &other) const
@@ -93,7 +178,7 @@ void Vector2D::operator=(const Vector2D &other)
     this->_x = other._x;
     this->_y = other._y;
 }
-Vector2D Vector2D::normalize()const
+Vector2D Vector2D::normalize() const
 {
     Vector2D v_normalized;
 
@@ -103,8 +188,8 @@ Vector2D Vector2D::normalize()const
     v_normalized._x = this->_x / norm;
     v_normalized._y = this->_y / norm;
 
-    v_normalized._x = (fabs(v_normalized._x) < 1.0e-9)?0.0: v_normalized._x;
-    v_normalized._y = (fabs(v_normalized._y) < 1.0e-9)?0.0: v_normalized._y;
+    v_normalized._x = (fabs(v_normalized._x) < 1.0e-9) ? 0.0 : v_normalized._x;
+    v_normalized._y = (fabs(v_normalized._y) < 1.0e-9) ? 0.0 : v_normalized._y;
 
     return v_normalized;
 }
@@ -199,60 +284,60 @@ double Polygon2D::penetration_test(const Vector2D &p) const
         a = pk[0].y() - pk[1].y();
         b = pk[1].x() - pk[0].x();
         c = pk[0].x() * pk[1].y() - pk[1].x() * pk[0].y();
-        
+
         d = (a * p.x() + b * p.y() + c) / sqrt(a * a + b * b);
-        d = (fabs(d) < 1.0e-6)?0.0:d;
-        if(d < min)
+        d = (fabs(d) < 1.0e-6) ? 0.0 : d;
+        if (d < min)
             min = d;
     }
     return min;
 }
 // WARNING: Calculo de distancia entre poligonos está falhando ainda
-double Polygon2D::distance(const Polygon2D &polygon)const
+double Polygon2D::distance(const Polygon2D &polygon) const
 {
-    double dist          = std::numeric_limits<double>::max();
+    double dist = std::numeric_limits<double>::max();
     double d;
-    Vector2D ai,bj, Vai, Vbj;
-    
-    auto my_vertex_it    = my_vertices.begin();
-    auto my_normals      = this->get_normalVectors();
-    auto my_normals_it   = my_normals.begin();
-    
-    auto poly_vertices   = polygon.get_vertices();
-    auto poly_vertex_it  = poly_vertices.begin();
-    auto poly_normals    = polygon.get_normalVectors();
-    auto poly_normals_it = poly_normals.begin(); 
-    
+    Vector2D ai, bj, Vai, Vbj;
+
+    auto my_vertex_it = my_vertices.begin();
+    auto my_normals = this->get_normalVectors();
+    auto my_normals_it = my_normals.begin();
+
+    auto poly_vertices = polygon.get_vertices();
+    auto poly_vertex_it = poly_vertices.begin();
+    auto poly_normals = polygon.get_normalVectors();
+    auto poly_normals_it = poly_normals.begin();
+
     //percorre todos os vertices deste poligono (this/A)
-    int ia = 0,jb = 0;
-    for(my_vertex_it; my_vertex_it != my_vertices.end(); my_vertex_it++)
+    int ia = 0, jb = 0;
+    for (my_vertex_it; my_vertex_it != my_vertices.end(); my_vertex_it++)
     {
         ai = *my_vertex_it;
-        Vai= *my_normals_it;
+        Vai = *my_normals_it;
         //percorre todos os vertices do outro poligono (polygon/B)
         poly_normals_it = poly_normals.begin();
 
         jb = 0;
-        for(poly_vertex_it = poly_vertices.begin(); poly_vertex_it != poly_vertices.end(); poly_vertex_it++)
-        {   
+        for (poly_vertex_it = poly_vertices.begin(); poly_vertex_it != poly_vertices.end(); poly_vertex_it++)
+        {
             bj = *poly_vertex_it;
-            Vbj= *poly_normals_it;
+            Vbj = *poly_normals_it;
 
             // contato tipo A
-            d = Vai.dot( bj - ai );
-            printf("\nai:%d -> bj:%d\n",ia, jb);
+            d = Vai.dot(bj - ai);
+            printf("\nai:%d -> bj:%d\n", ia, jb);
             std::cout << "d:" << d << '\n';
-            
-            d = (d <= 0.0)?std::numeric_limits<double>::max():d;
-            dist = (d < dist )?d:dist;
-            
+
+            d = (d <= 0.0) ? std::numeric_limits<double>::max() : d;
+            dist = (d < dist) ? d : dist;
+
             // contato tipo B
-            d = Vbj.dot( ai - bj );
-            printf("bj:%d -> ai:%d\n",jb, ia);
+            d = Vbj.dot(ai - bj);
+            printf("bj:%d -> ai:%d\n", jb, ia);
             std::cout << "d:" << d << '\n';
-            
-            d = (d <= 0.0)?std::numeric_limits<double>::max():d;
-            dist = (d < dist)?d:dist;
+
+            d = (d <= 0.0) ? std::numeric_limits<double>::max() : d;
+            dist = (d < dist) ? d : dist;
 
             poly_normals_it++;
             jb++;
@@ -266,27 +351,27 @@ double Polygon2D::distance(const Polygon2D &polygon)const
 bool Polygon2D::check_overlay(const Polygon2D &other) const
 {
     // verifica se algum vertice de A esta dentro de B e vice-versa
-    auto other_vertices    = other.get_vertices();
+    auto other_vertices = other.get_vertices();
     auto other_vertices_it = other_vertices.begin();
-    auto my_vertices_it    = this->my_vertices.begin();
+    auto my_vertices_it = this->my_vertices.begin();
     double d;
 
     //testa se algum vertice de Other esta dentro deste poligono (this)
-    for(other_vertices_it; other_vertices_it != other_vertices.end(); other_vertices_it++)
+    for (other_vertices_it; other_vertices_it != other_vertices.end(); other_vertices_it++)
     {
         d = this->penetration_test(*other_vertices_it);
         //caso bj esteja dentro de A, o teste de penetração resultara em um número positivo
-        if(d > 0.0)
-            return true;    
+        if (d > 0.0)
+            return true;
     }
 
     //testa se algum vertice deste poligono (this) esta dentro de Other
-    for(my_vertices_it; my_vertices_it != my_vertices.end(); my_vertices_it++)
+    for (my_vertices_it; my_vertices_it != my_vertices.end(); my_vertices_it++)
     {
         d = other.penetration_test(*my_vertices_it);
         //caso ai esteja dentro de B, o teste de penetração resultara em um número positivo
-        if(d > 0.0)
-            return true;    
+        if (d > 0.0)
+            return true;
     }
 
     return false;
@@ -298,18 +383,18 @@ void Polygon2D::operator=(const Polygon2D &other)
 
 Polygon2D Polygon2D::circle_to_polygon2D(const double &radius, const unsigned int num_vertices)
 {
-    return Polygon2D::circle_to_polygon2D(Vector2D(0,0), radius, num_vertices);
+    return Polygon2D::circle_to_polygon2D(Vector2D(0, 0), radius, num_vertices);
 }
 Polygon2D Polygon2D::circle_to_polygon2D(const Vector2D &center, const double &radius, const unsigned int num_vertices)
 {
     Polygon2D polygon;
-    Vector2D  p0, vertex_tmp;
+    Vector2D p0, vertex_tmp;
     double phi = M_PI / num_vertices;
     p0 = Vector2D(radius, radius * tan(phi));
 
-    for(unsigned int i = 0; i < num_vertices; i++)
+    for (unsigned int i = 0; i < num_vertices; i++)
     {
-        vertex_tmp = p0.rotation(2.0*i*phi);
+        vertex_tmp = p0.rotation(2.0 * i * phi);
         vertex_tmp = vertex_tmp + center;
         polygon.add_vertex(vertex_tmp);
     }
@@ -320,12 +405,12 @@ Polygon2D Polygon2D::circle_to_polygon2D(const Vector2D &center, const double &r
 Polygon2D Polygon2D::rectangle_to_polygon2D(const Vector2D &p1, const Vector2D &p2)
 {
     Polygon2D polygon;
-    Vector2D  center, p1p2 = p2-p1;
+    Vector2D center, p1p2 = p2 - p1;
     double width, height, norm = p1p2.norm(), ang = p1p2.ang();
-    
-    center = (p2 + p1)*0.5; //(p1+p2)/2.0
-    width  = norm*cos(ang);
-    height = norm*sin(ang);
+
+    center = (p2 + p1) * 0.5; //(p1+p2)/2.0
+    width = norm * cos(ang);
+    height = norm * sin(ang);
 
     return Polygon2D::rectangle_to_polygon2D(center, width, height);
 }
@@ -335,19 +420,19 @@ Polygon2D Polygon2D::rectangle_to_polygon2D(const Vector2D &center, const double
     Vector2D p_tmp;
 
     //vertice 1
-    p_tmp = center + Vector2D(-width/2.0, -height/2.0);
+    p_tmp = center + Vector2D(-width / 2.0, -height / 2.0);
     polygon.add_vertex(p_tmp);
 
     //vertice 2
-    p_tmp = center + Vector2D(width/2.0, -height/2.0);
+    p_tmp = center + Vector2D(width / 2.0, -height / 2.0);
     polygon.add_vertex(p_tmp);
 
     //vertice 3
-    p_tmp = center + Vector2D(width/2.0, height/2.0);
+    p_tmp = center + Vector2D(width / 2.0, height / 2.0);
     polygon.add_vertex(p_tmp);
 
     //vertice 4
-    p_tmp = center + Vector2D(-width/2.0, height/2.0);
+    p_tmp = center + Vector2D(-width / 2.0, height / 2.0);
     polygon.add_vertex(p_tmp);
 
     return polygon;
@@ -355,7 +440,7 @@ Polygon2D Polygon2D::rectangle_to_polygon2D(const Vector2D &center, const double
 
 Polygon2D Polygon2D::rectangle_to_polygon2D(const double &width, const double height)
 {
-    return Polygon2D::rectangle_to_polygon2D(Vector2D(0,0), width, height);
+    return Polygon2D::rectangle_to_polygon2D(Vector2D(0, 0), width, height);
 }
 
 std::list<Vector2D> Polygon2D::get_vertices() const
@@ -394,7 +479,7 @@ std::list<Vector2D> Polygon2D::get_normalVectors() const
     return normals;
 }
 
-Polygon2D Polygon2D::work_to_config_space(const Robot &robot) const
+Polygon2D Polygon2D::work_to_config_space(const Polygon2D &robot) const
 {
     Polygon2D polygon;
     std::list<Vector2D> ob_normals;
@@ -404,8 +489,8 @@ Polygon2D Polygon2D::work_to_config_space(const Robot &robot) const
     std::list<std::tuple<Vector2D, Vector2D, bool>> normal_vertex_list;
 
     ob_normals = this->get_normalVectors();
-    robot_normals = robot.my_shape.get_normalVectors();
-    robot_vertices = robot.my_shape.get_vertices();
+    robot_normals = robot.get_normalVectors();
+    robot_vertices = robot.get_vertices();
 
     //preenchendo a tupla normal_vertex_list
 
@@ -424,7 +509,7 @@ Polygon2D Polygon2D::work_to_config_space(const Robot &robot) const
     for (int i = 0; i < robot_normals.size(); i++)
     {
         //empacotando o vertice com a respectiva normal negativada (vertex, -normal, 1/true(flag::robot))
-        auto normal_vertex = std::make_tuple(*(it_vertex++), *(it_normal++)*-1.0, true);
+        auto normal_vertex = std::make_tuple(*(it_vertex++), *(it_normal++) * -1.0, true);
         normal_vertex_list.push_back(normal_vertex);
     }
     //sorting normal_vertex list according to normal vector
@@ -438,7 +523,7 @@ Polygon2D Polygon2D::work_to_config_space(const Robot &robot) const
     bool is_robot;
 
     while (curr_normal_it != normal_vertex_list.end())
-    {   
+    {
         is_robot = std::get<2>(*curr_normal_it);
         /* procura pela proxima normal
         **caso o atual seja a normal do obstaculo (is_robot == false): procurar pela normal seguinte do robo
@@ -446,7 +531,7 @@ Polygon2D Polygon2D::work_to_config_space(const Robot &robot) const
         */
         //TODO: tratar quando for ultimo elemento
         next_normal_it = std::find(curr_normal_it, normal_vertex_list.end(), !is_robot);
-        if(next_normal_it == normal_vertex_list.end())
+        if (next_normal_it == normal_vertex_list.end())
         {
             next_normal_it = std::find(normal_vertex_list.begin(), normal_vertex_list.end(), !is_robot);
         }
@@ -466,7 +551,7 @@ Polygon2D Polygon2D::work_to_config_space(const Robot &robot) const
     }
 
     //calculo para o ultimo ponto/vertice (estou tratando fora do loop pq a lista não é circular)
-    auto last= normal_vertex_list.back();
+    auto last = normal_vertex_list.back();
     is_robot = std::get<2>(last);
     next_normal_it = std::find(normal_vertex_list.begin(), normal_vertex_list.end(), !is_robot);
     if (is_robot)
@@ -478,13 +563,10 @@ Polygon2D Polygon2D::work_to_config_space(const Robot &robot) const
     {
         a = std::get<0>(*next_normal_it);
         b = std::get<0>(last);
-    }    
-
+    }
 
     return polygon;
 }
-
-
 
 bool Polygon2D::check_convexity(const Polygon2D &poly)
 {
@@ -513,10 +595,185 @@ bool Polygon2D::check_convexity(const Polygon2D &poly)
         {
             Vector2D p(*it);
             d = (a * p.x() + b * p.y() + c) / sqrt(a * a + b * b);
-            d = (fabs(d) < 1.0e-6)?0.0:d;
+            d = (fabs(d) < 1.0e-6) ? 0.0 : d;
             if (d < 0.0)
                 return false;
         }
     }
     return true;
+}
+
+void Polygon2D::load_from_istream(std::istream &I)
+{
+    Polygon2D poly_tmp;
+    int num_vertices = 0;
+    std::string keyword;
+    double x, y;
+
+    std::getline(I, keyword, ':');
+    if (keyword != "N")
+        return;
+    I >> num_vertices;
+
+    for (int i = 0; i < num_vertices; i++)
+    {
+        I >> x;
+        I >> y;
+        poly_tmp.add_vertex(Vector2D(x, y));
+    }
+
+    *this = poly_tmp;
+}
+std::ostream &Polygon2D::save_to_ostream(std::ostream &O) const
+{
+    O << "N:" << this->my_vertices.size() << '\n';
+    for (auto it = my_vertices.begin(); it != my_vertices.end(); it++)
+    {
+        O << it->x() << ' ' << it->y() << '\n';
+    }
+    return O;
+}
+bool Polygon2D::save_to_file(const std::string fileName)
+{
+    std::ofstream outFile(fileName, std::ofstream::out);
+    if (outFile.is_open() == false)
+        return false;
+    outFile << (*this);
+    outFile.close();
+    return true;
+}
+bool Polygon2D::load_from_file(const std::string fileName)
+{
+    std::ifstream input(fileName, std::ifstream::in);
+
+    if (input.is_open() == false)
+        return false;
+
+    input >> (*this);
+
+    input.close();
+    return true;
+}
+
+void operator>>(std::istream &I, Polygon2D &polygon)
+{
+    polygon.load_from_istream(I);
+}
+std::ostream &operator<<(std::ostream &O, const Polygon2D &polygon)
+{
+    polygon.save_to_ostream(O);
+    return O;
+}
+
+/*********************************************************************************************/
+World::World(std::list<Polygon2D> &obstacles, const Robot &robot) : my_obstacles(obstacles),
+                                                                    my_robot(robot),
+                                                                    my_n_samples(100),
+                                                                    my_CBs(NULL)
+{
+}
+World::World(const Robot &robot) : my_obstacles(),
+                                   my_robot(robot),
+                                   my_n_samples(100),
+                                   my_CBs(NULL)
+{
+}
+
+World::~World()
+{
+    this->remove_all_obstacles();
+}
+
+void World::add_obstacle(const Polygon2D &obstacle)
+{
+    my_obstacles.push_back(obstacle);
+}
+void World::update_config(const Config &config)
+{
+    my_robot.set_config(config);
+}
+std::list<Polygon2D> World::get_obstacles() const
+{
+    return my_obstacles;
+}
+Robot World::get_robot() const
+{
+    return my_robot;
+}
+void World::compute_c_obstacles(const unsigned int n_samples)
+{
+    double step_angle = 2.0 * M_PI / n_samples;
+    Polygon2D robot_th = my_robot.get_shape();
+
+    if ((n_samples == my_n_samples) && (my_CBs != NULL)) //ja computado
+        return;
+
+    if (my_CBs != NULL)
+    {
+        for (int i = 0; i < my_n_samples; i++)
+        {
+            my_CBs[i].clear();
+        }
+        delete[] my_CBs;
+    }
+    my_n_samples = n_samples;
+    my_CBs = new std::list<Polygon2D>[my_n_samples];
+
+    for (int i = 0; i < my_n_samples; i++)
+    {
+        robot_th = robot_th.rotation(step_angle * i);
+        for (auto obstacle_it = my_obstacles.begin(); obstacle_it != my_obstacles.end(); obstacle_it++)
+        {
+            my_CBs[i].push_back(obstacle_it->work_to_config_space(robot_th));
+        }
+    }
+}
+std::list<Polygon2D> World::get_cobstacles(const unsigned int n_samples)
+{
+    unsigned int CB_index;
+    double step_angle = 2.0 * M_PI / n_samples;
+    double curr_th = my_robot.get_config().get_theta();
+    //ira computar apenas se necessario os CBs
+    this->compute_c_obstacles(n_samples);
+
+    CB_index = round(curr_th / step_angle);
+
+    return my_CBs[CB_index];
+}
+void World::remove_all_obstacles()
+{
+    my_obstacles.clear();
+    if (my_CBs == NULL)
+    {
+        my_n_samples = 0;
+        return;
+    }
+
+    for (int i = 0; i < my_n_samples; i++)
+    {
+        my_CBs[i].clear();
+    }
+    my_n_samples = 0;
+    delete[] my_CBs;
+}
+void World::set_robot(const Robot &robot)
+{
+    my_robot = robot;
+}
+
+bool World::check_collision()
+{
+    Polygon2D robot_point;//robo em espaco de configuracao
+    robot_point.add_vertex(my_robot.get_config().get_pos());
+    std::list<Polygon2D> cb_obstacles;
+
+    cb_obstacles = this->get_cobstacles(my_n_samples);
+
+    for(auto obstacle_it = cb_obstacles.begin(); obstacle_it != cb_obstacles.end() ; obstacle_it++)
+    {
+        if(obstacle_it->check_overlay(robot_point) == true)
+            return true;
+    }
+
+    return false;
 }
