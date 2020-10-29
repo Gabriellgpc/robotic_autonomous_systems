@@ -85,23 +85,17 @@ void Vector2D::operator=(const Vector2D &other)
     this->_x = other._x;
     this->_y = other._y;
 }
-void Vector2D::normalize()
+Vector2D Vector2D::normalize()const
 {
+    Vector2D v_normalized;
+
     double norm = this->norm();
     if (norm == 0.0)
-        return;
-    this->_x /= norm;
-    this->_y /= norm;
-}
-void Vector2D::translate(const Vector2D &trans)
-{
-    this->_x += trans._x;
-    this->_y += trans._y;
-}
-void Vector2D::rotation(const double &theta)
-{
-    this->_x = this->_x * cos(theta) - this->_y * sin(theta);
-    this->_y = this->_x * sin(theta) + this->_y * cos(theta);
+        return v_normalized;
+    v_normalized._x = this->_x / norm;
+    v_normalized._y = this->_y / norm;
+    
+    return v_normalized;
 }
 
 Vector2D Vector2D::translate(const Vector2D &trans) const
@@ -120,16 +114,16 @@ Vector2D Vector2D::rotation(const double &theta) const
 }
 /*********************************************************** Polygon2D ***********************************************************/
 typedef std::list<Vector2D>::const_iterator vertex_it;
-bool operator<(std::tuple<Vector2D, Vector2D, bool> A, std::tuple<Vector2D, Vector2D, int> B)
+bool operator<(std::tuple<Vector2D, Vector2D, bool> A, std::tuple<Vector2D, Vector2D, bool> B)
 {
-    return (std::get<1>(A)).ang() < (std::get<1>(B)).ang();
+    double angA = std::get<1>(A).ang();
+    double angB = std::get<1>(B).ang();
+    return angA < angB;
 }
-
 bool operator==(std::tuple<Vector2D, Vector2D, bool> A, bool flag)
 {
     return std::get<2>(A) == flag;
 }
-
 Polygon2D::Polygon2D() : my_vertices()
 {
 }
@@ -159,8 +153,9 @@ Polygon2D Polygon2D::translate(const Vector2D &trans) const
     auto ver_it = result.my_vertices.begin();
     for (ver_it; ver_it != result.my_vertices.end(); ver_it++)
     {
-        ver_it->translate(trans);
+        *ver_it = ver_it->translate(trans);
     }
+    return result;
 }
 //retorna o poligono resultante da rotação do atual poligono em theta radianos
 Polygon2D Polygon2D::rotation(const double &theta) const
@@ -170,8 +165,9 @@ Polygon2D Polygon2D::rotation(const double &theta) const
     auto ver_it = result.my_vertices.begin();
     for (ver_it; ver_it != result.my_vertices.end(); ver_it++)
     {
-        ver_it->rotation(theta);
+        *ver_it = ver_it->rotation(theta);
     }
+    return result;
 }
 double Polygon2D::penetration_test(const Vector2D &p) const
 {
@@ -239,29 +235,101 @@ double Polygon2D::distance(const Polygon2D &polygon)const
     return dist;
 }
 //retorna true caso tenha sobreposição entre os poligonos (entre this e other)
-bool Polygon2D::check_overlay(const Polygon2D other) const
+bool Polygon2D::check_overlay(const Polygon2D &other) const
 {
     // verifica se algum vertice de A esta dentro de B e vice-versa
-    
+    auto other_vertices    = other.get_vertices();
+    auto other_vertices_it = other_vertices.begin();
+    auto my_vertices_it    = this->my_vertices.begin();
+    double d;
+
+    //testa se algum vertice de Other esta dentro deste poligono (this)
+    for(other_vertices_it; other_vertices_it != other_vertices.end(); other_vertices_it++)
+    {
+        d = this->penetration_test(*other_vertices_it);
+        //caso bj esteja dentro de A, o teste de penetração resultara em um número positivo
+        if(d > 0.0)
+            return true;    
+    }
+
+    //testa se algum vertice deste poligono (this) esta dentro de Other
+    for(my_vertices_it; my_vertices_it != my_vertices.end(); my_vertices_it++)
+    {
+        d = other.penetration_test(*my_vertices_it);
+        //caso ai esteja dentro de B, o teste de penetração resultara em um número positivo
+        if(d > 0.0)
+            return true;    
+    }
+
+    return false;
 }
 void Polygon2D::operator=(const Polygon2D &other)
 {
     this->my_vertices = other.my_vertices;
 }
-Polygon2D Polygon2D::circle_to_polygon2D(const double &radius)
-{
 
+Polygon2D Polygon2D::circle_to_polygon2D(const double &radius, const unsigned int num_vertices)
+{
+    return Polygon2D::circle_to_polygon2D(Vector2D(0,0), radius, num_vertices);
+}
+Polygon2D Polygon2D::circle_to_polygon2D(const Vector2D &center, const double &radius, const unsigned int num_vertices)
+{
+    Polygon2D polygon;
+    Vector2D  p0, vertex_tmp;
+    double phi = M_PI / num_vertices;
+    p0 = Vector2D(radius, radius * tan(phi));
+
+    for(unsigned int i = 0; i < num_vertices; i++)
+    {
+        vertex_tmp = p0.rotation(2.0*i*phi);
+        vertex_tmp = vertex_tmp + center;
+        polygon.add_vertex(vertex_tmp);
+    }
+    return polygon;
 }
 //p1: vertice inferior esquerdo
 //p2: vertice superior direito
 Polygon2D Polygon2D::rectangle_to_polygon2D(const Vector2D &p1, const Vector2D &p2)
 {
+    Polygon2D polygon;
+    Vector2D  center, p1p2 = p2-p1;
+    double width, height, norm = p1p2.norm(), ang = p1p2.ang();
+    
+    center = (p2 + p1)*0.5; //(p1+p2)/2.0
+    width  = norm*cos(ang);
+    height = norm*sin(ang);
 
+    return Polygon2D::rectangle_to_polygon2D(center, width, height);
 }
 Polygon2D Polygon2D::rectangle_to_polygon2D(const Vector2D &center, const double &width, const double height)
 {
+    Polygon2D polygon;
+    Vector2D p_tmp;
 
+    //vertice 1
+    p_tmp = center + Vector2D(-width/2.0, -height/2.0);
+    polygon.add_vertex(p_tmp);
+
+    //vertice 2
+    p_tmp = center + Vector2D(width/2.0, -height/2.0);
+    polygon.add_vertex(p_tmp);
+
+    //vertice 3
+    p_tmp = center + Vector2D(width/2.0, height/2.0);
+    polygon.add_vertex(p_tmp);
+
+    //vertice 4
+    p_tmp = center + Vector2D(-width/2.0, height/2.0);
+    polygon.add_vertex(p_tmp);
+
+    return polygon;
 }
+
+Polygon2D Polygon2D::rectangle_to_polygon2D(const double &width, const double height)
+{
+    return Polygon2D::rectangle_to_polygon2D(Vector2D(0,0), width, height);
+}
+
 std::list<Vector2D> Polygon2D::get_vertices() const
 {
     return this->my_vertices;
@@ -291,7 +359,7 @@ std::list<Vector2D> Polygon2D::get_normalVectors() const
         //vetor normal ao lado ai ai+1
         normal_tmp = Vector2D(normal_tmp.y(), -normal_tmp.x());
         //normalizando o vetor
-        normal_tmp.normalize();
+        normal_tmp = normal_tmp.normalize();
         //adicionado a lista de normais
         normals.push_back(normal_tmp);
     }
