@@ -13,11 +13,13 @@ LDFLAGS =	-L ${COPSIM_BASEDIR}/programming/bluezero/build\
 LDLIBS = -lpthread	-lb0	-fopenmp -lpython3.8	-lcontroller	-lutils	-lb0RemoteApi\
 		 -lutil -lboost_iostreams -lboost_system -lboost_filesystem
 
-PROGRAM = p2m1
+PROGRAM = p2m1	visualization_demo
 
 all:	${PROGRAM}
 
 p2m1.o:	p2m1.hpp	p2m1.cpp
+
+visualization_demo.o:	visualization_demo.cpp
 
 %.o: %.cpp gnuplot-iostream.h
 	@echo Compiling $@
@@ -27,8 +29,10 @@ p2m1: p2m1.o
 	@echo Linking $@
 	$(CXX) -o $@ $^ $(LDFLAGS) ${LDLIBS}
 
-# p2m1:	p2m1.o
-
+visualization_demo: visualization_demo.o
+	@echo Linking $@
+	$(CXX) -o $@ $^ $(LDFLAGS) ${LDLIBS}
+	
 clean:
 	rm *.o
 	rm ${PROGRAM}

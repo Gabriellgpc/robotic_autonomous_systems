@@ -1,85 +1,148 @@
-#include <matplotlibcpp.h>
-#include <gnuplot-iostream.h>
+#include "p2m1.hpp"  //polygon2D_to_Vector2D
 
-#include <configSpaceTools.hpp>
+#include <gnuplot-iostream.h>   //Gnuplot
+#include <configSpaceTools.hpp> //Polygon2D, Robot, World, Vector2D
+#include <b0RemoteApi.h>  //para comunicação com o coppeliaSim via Blue-zero
+#include <utils.hpp> //pioneer_model
+
 #include <iostream> //cout
 #include <stdio.h>  //printf
+#include <cstdio>   //FILENAME_MAX, printf
+#include <unistd.h> //getcwd
+#include <string>  //string
+#include <thread>  //thread
+#include <omp.h>   //omp_get_wtime()
 
-#include <list>
-#include <vector>
-#include <cmath>
-#include <string>
-#include <thread>
-#include <omp.h>
+#define SAMPLES 200
+#define GetCurrentDir getcwd
+#define STOP_TIME 120.0 //segundos
 
 using namespace std;
-namespace plt = matplotlibcpp;
-
-void plot_config_space(World w, Gnuplot *gp = NULL, const unsigned int n_samples = 100);
-void polygon_to_vectorsXY(const Polygon2D &polygon, std::vector<double> &vertices_x, std::vector<double> &vertices_y);
 
 void living_plot();
-void plot_path(std::vector<Config> config_hist, Gnuplot *gp);
+void _init();
 
-#define SAMPLES 100
-
-Robot robot(Config(), Polygon2D::circle_to_polygon2D(1.0, 8));
+b0RemoteApi client("b0RemoteApi_CoppeliaSim-addOn", "b0RemoteApiAddOn");
+Robot robot(Config(-3.0,-2.0,M_PI/4.0), Polygon2D::circle_to_polygon2D(0.52/2.0, 4));
 World W(robot);
+char cCurrentPath[FILENAME_MAX];
 bool is_finished = false;
 
 int main(int argc, char **argv)
 {
-    Polygon2D polygon;
-    double tik, tok;
-    std::thread thr_plot;
+    std::thread thr_plot; 
+    std::vector<float> pioneer_pos, pioneer_ori;
+    int pioneer, leftMotor, rightMotor;   
+    float w_r, w_l;
+    _init();
+    
+    pioneer = b0RemoteApi::readInt(client.simxGetObjectHandle("Pioneer_p3dx", client.simxServiceCall()), 1);
+    leftMotor = b0RemoteApi::readInt(client.simxGetObjectHandle("Pioneer_p3dx_leftMotor", client.simxServiceCall()), 1);
+    rightMotor = b0RemoteApi::readInt(client.simxGetObjectHandle("Pioneer_p3dx_rightMotor", client.simxServiceCall()), 1);
 
-    {
-        polygon = Polygon2D::rectangle_to_polygon2D(Vector2D(-10, 0), 5.0, 5.0);
-        W.add_obstacle(polygon);
-        polygon = Polygon2D::rectangle_to_polygon2D(Vector2D(10, 0), 5.0, 5.0);
-        W.add_obstacle(polygon);
-        polygon = Polygon2D::circle_to_polygon2D(2.0, 8);
-        polygon = polygon.rotation(M_PI / 5.0);
-        polygon = polygon.translate(Vector2D(0, 10.0));
-        W.add_obstacle(polygon);
-    }
-
-    polygon = Polygon2D();
-    polygon.add_vertex(Vector2D(0.0, 0));
-    polygon.add_vertex(Vector2D(1.0, 0));
-    polygon.add_vertex(Vector2D(0.0, 1));
-    robot.set_shape(polygon);
-    W.set_robot(robot);
-
-    {
-        tik = omp_get_wtime();
-        W.compute_c_obstacles(SAMPLES);
-        tok = omp_get_wtime();
-        std::cout << "Tempo para computar o CB-obstaculo:" << tok - tik << "s\n";
-    }
-
-    std::cout << "Laço for...\n";
-    double N = 1000.0;
     thr_plot = std::thread(living_plot);
-    for (int i = 0; i < N; i++)
-    {
-        Config config;
-        config.set_pos(3.0 * cos(2.0 * M_PI * i / N), 3.0 * sin(2.0 * M_PI * i / N));
-        config.set_theta(2.0 * M_PI * i / N);
-        W.update_config(config);
-        usleep(30 * 1000);
-    }
-    is_finished = true;
-    thr_plot.join();
+    Config curr_config;
+    double time = 0, start_time = omp_get_wtime();
+    do{
+        time = omp_get_wtime() - start_time;
+        bool r_pos = b0RemoteApi::readFloatArray(client.simxGetObjectPosition(pioneer, -1, client.simxServiceCall()), pioneer_pos, 1);
+        bool r_ori = b0RemoteApi::readFloatArray(client.simxGetObjectOrientation(pioneer, -1, client.simxServiceCall()), pioneer_ori, 1);
+        if(!r_pos || !r_ori)continue;
+        
+        curr_config.set_pos(pioneer_pos[0], pioneer_pos[1]);
+        curr_config.set_theta(pioneer_ori[2]);
+        W.update_config(curr_config);
 
+        if(time > 0.3 && W.check_collision())
+        {
+            std::cout << "Colisão detectada!\n";
+            break;
+        }
+
+        //movimento circular
+        if(time <= 30.0){
+            pioneer_model(0.0, 2.0*M_PI/30.0, w_r, w_l);
+        }else//movimento linear
+        {
+            pioneer_model(0.2, 0.1, w_r, w_l);
+        }
+        client.simxSetJointTargetVelocity(rightMotor, w_r, client.simxServiceCall());
+        client.simxSetJointTargetVelocity(leftMotor,  w_l, client.simxServiceCall());
+    }while(time <= STOP_TIME);
+
+    client.simxSetJointTargetVelocity(rightMotor, 0.0, client.simxServiceCall());
+    client.simxSetJointTargetVelocity(leftMotor,  0.0, client.simxServiceCall());
+    is_finished = true;
+    
     std::cout << "Programa encerrando...\n";
+    thr_plot.join();
+    std::cout << "Programa encerrado!\n";
+    client.simxStopSimulation(client.simxServiceCall());
     return 0;
+}
+
+void _init()
+{
+    Polygon2D obstacle;
+
+    bool r = GetCurrentDir(cCurrentPath, sizeof(cCurrentPath));
+    if (!r)std::cerr << "Falha ao carregar o cenário!\n";
+    std::string scene = string(cCurrentPath) + string("/scenes/p2m1_scene.ttt");
+    client.simxLoadScene(scene.c_str(), client.simxServiceCall());
+
+    //Criando obstaculos
+    {
+        // Parede inferior
+        obstacle = Polygon2D::rectangle_to_polygon2D(10.0, 0.1);
+        obstacle = obstacle.translate(0.0, -5.0);
+        W.add_obstacle(obstacle);
+        // Parede da direita
+        obstacle = Polygon2D::rectangle_to_polygon2D(10.0, 0.1);
+        obstacle = obstacle.rotation(M_PI/2.0);
+        obstacle = obstacle.translate(5.0,0.0);
+        W.add_obstacle(obstacle);
+        // Parede superior
+        obstacle = Polygon2D::rectangle_to_polygon2D(10.0, 0.1);
+        obstacle = obstacle.translate(0.0, 5.0);
+        W.add_obstacle(obstacle);
+        // Parede da esquerda
+        obstacle = Polygon2D::rectangle_to_polygon2D(10.0, 0.1);
+        obstacle = obstacle.rotation(M_PI/2.0);
+        obstacle = obstacle.translate(-5.0,0.0);
+        W.add_obstacle(obstacle);
+        // Retangulo da esquerda
+        obstacle = Polygon2D::rectangle_to_polygon2D(2.0, 0.5);
+        obstacle = obstacle.translate(-4.0,-0.5);
+        W.add_obstacle(obstacle);
+        // Retangulo da direita
+        obstacle = Polygon2D::rectangle_to_polygon2D(2.0, 0.5);
+        obstacle = obstacle.translate(4.0,-0.5);
+        W.add_obstacle(obstacle);
+        // Retangulo central
+        obstacle = Polygon2D::rectangle_to_polygon2D(3.0, 2.0);
+        obstacle = obstacle.translate(0.0,-3.7);
+        W.add_obstacle(obstacle);
+        // Retangulo maior
+        obstacle = Polygon2D::rectangle_to_polygon2D(5.0, 3.0);
+        obstacle = obstacle.translate(0.0,2.75);
+        W.add_obstacle(obstacle);
+        // Hexagono
+        obstacle = Polygon2D::circle_to_polygon2D(1.0,8);
+        obstacle = obstacle.translate(0.0,-0.5);
+        W.add_obstacle(obstacle);
+    }
+    double tik,tok;
+    tik = omp_get_wtime();
+    W.compute_c_obstacles(SAMPLES);
+    tok = omp_get_wtime();
+    client.simxStartSimulation(client.simxServiceCall());
+    std::cout << "Conectado!\n";
+
+    printf("Tempo gasto calcular o espaço de configuração com %d amostras de theta  e %ld obstaculos | dt = %lf s\n", SAMPLES, W.get_obstacles().size(), tok - tik);
 }
 
 void living_plot()
 {
-    std::cout << "Living plot on!\n";
-
     std::list<Polygon2D> obstacles = W.get_obstacles();
     std::list<Polygon2D> cb_obstacles;
     std::vector<double> x_vec, y_vec, x_robot, y_robot;
@@ -104,13 +167,10 @@ void living_plot()
         {
             x_vec.clear();
             y_vec.clear();
-            polygon_to_vectorsXY(*polygon_it, x_vec, y_vec);
+            Polygon2D::polygon_to_vectorsXY(*polygon_it, x_vec, y_vec);
             pts_obs.emplace_back(std::make_tuple(x_vec, y_vec));
         }
     }
-
-    // Gnuplot *gp_config = new Gnuplot();
-    // plot_config_space(W, gp_config, SAMPLES);
     
     while (is_finished == false)
     {
@@ -126,12 +186,12 @@ void living_plot()
         y_robot.push_back(W.get_robot().get_config().get_pos().y());
         pts.clear();
         pts.emplace_back(std::make_tuple(x_robot, y_robot));
-        plots_work.add_plot2d(pts, "with line lc 'red'");
+        plots_work.add_plot2d(pts, "with line lc 'red' lw 1");
 
         //plot current position only
         x_vec.clear();
         y_vec.clear();
-        polygon_to_vectorsXY(W.get_robot().to_polygon2D(), x_vec, y_vec);
+        Polygon2D::polygon_to_vectorsXY(W.get_robot().to_polygon2D(), x_vec, y_vec);
         pts.clear();
         pts.emplace_back(std::make_tuple(x_vec, y_vec));
         plots_work.add_plot2d(pts, "with line lc'red'");
@@ -143,7 +203,7 @@ void living_plot()
         {
             x_vec.clear();
             y_vec.clear();
-            polygon_to_vectorsXY(*cb_it, x_vec, y_vec);
+            Polygon2D::polygon_to_vectorsXY(*cb_it, x_vec, y_vec);
             pts.emplace_back(std::make_tuple(x_vec, y_vec));
         }
         plots_config.add_plot2d(pts, "with filledcurve fc 'black'");
@@ -151,7 +211,7 @@ void living_plot()
         // robot at config space
         pts.clear();
         pts.emplace_back(std::make_tuple(x_robot, y_robot));
-        plots_config.add_plot2d(pts, "with line lc 'red'");
+        plots_config.add_plot2d(pts, "with linespoints lc 'red' lt 7 lw 1");
 
         //show plot
         gp_work << plots_work;
@@ -160,65 +220,4 @@ void living_plot()
 
     std::cout << "Press enter to exit." << std::endl;
     std::cin.get();
-    std::cout << "Living plot off!\n";
-
-    // if (gp_config != NULL)
-    //     delete gp_config;
-}
-
-void plot_config_space(World w, Gnuplot *gp, const unsigned int n_samples)
-{
-    // Gnuplot gp;
-    if (gp == NULL)
-        return;
-
-    std::vector<std::tuple<
-        std::vector<double>,
-        std::vector<double>,
-        std::vector<double>>>
-        pts;
-    std::vector<double> x_vec, y_vec, z_vec;
-    std::vector<double> x,y,z;
-    Polygon2D polygon;
-    auto plots = gp->splotGroup();
-    // auto cb_obstacles = w.get_cobstacles(n_samples);
-
-    *gp << "set title 'Espaço de configuração'\n";
-    *gp << "load 'config_plot3D'\n";
-
-    const double step_th = 2.0 * M_PI / n_samples;
-    long i = 0;
-    for (double th = 0.0; th < 2.0 * M_PI; th += step_th)
-    {
-        w.update_config(Config(Vector2D(), th));
-        auto cb_obstacles = w.get_cobstacles(n_samples);
-        for (auto cb_it = cb_obstacles.begin(); cb_it != cb_obstacles.end(); cb_it++)
-        {
-            x_vec.clear();
-            y_vec.clear();
-            polygon_to_vectorsXY(*cb_it, x_vec, y_vec);
-            z_vec = std::vector<double>(x_vec.size(), th);
-            pts.emplace_back(std::make_tuple(x_vec, y_vec, z_vec));
-        }
-        plots.add_plot2d(pts, "with polygons fc 'gray75'");
-    }
-    *gp << plots;
-}
-
-
-void polygon_to_vectorsXY(const Polygon2D &polygon, std::vector<double> &vertices_x, std::vector<double> &vertices_y)
-{
-    auto vertices = polygon.get_vertices();
-
-    for (auto it = vertices.begin(); it != vertices.end(); it++)
-    {
-        vertices_x.push_back(it->x());
-        vertices_y.push_back(it->y());
-    }
-
-    if (vertices.size() > 1.0)
-    {
-        vertices_x.push_back(vertices.front().x());
-        vertices_y.push_back(vertices.front().y());
-    }
 }

@@ -3,8 +3,8 @@ unset object
 set pm3d lighting spec2 0.6
 unset k
 set pm3d depth
-set xr [-15:15]
-set yr [-15:15]
+set xr [-5.2:5.2]
+set yr [-5.2:5.2]
 set zr [0:2*pi]
 set view equal xyz
 set xlabel 'x[m]'

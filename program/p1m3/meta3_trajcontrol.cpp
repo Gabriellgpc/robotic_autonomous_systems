@@ -99,11 +99,8 @@ int main()
     bool r = GetCurrentDir(cCurrentPath, sizeof(cCurrentPath));
     if (!r)
         std::cerr << "Falha ao carregar o cenário!\n";
-    #ifndef CIRCULAR_PATH
     std::string scene = string(cCurrentPath) + string("/scenes/trajcontrol.ttt");
-    #else
-    std::string scene = string(cCurrentPath) + string("/scenes/circular_trajcontrol.ttt");
-    #endif
+    
     client.simxLoadScene(scene.c_str(), client.simxServiceCall());
     client.simxStartSimulation(client.simxServiceCall());
     std::cout << "Conectado!\n";

@@ -56,6 +56,7 @@ public:
     Polygon2D work_to_config_space(const Polygon2D &robot)const;
     //retorna o poligono resultante da translação do atual poligono
     Polygon2D translate(const Vector2D &trans)const; //[m]
+    Polygon2D translate(const double &x, const double &y)const; //[m]
     //retorna o poligono resultante da rotação do atual poligono em theta radianos
     Polygon2D rotation(const double &theta)const;   //[rad]
     
@@ -79,6 +80,7 @@ public:
     static Polygon2D rectangle_to_polygon2D(const Vector2D &p1, const Vector2D &p2);
     static Polygon2D rectangle_to_polygon2D(const Vector2D &center, const double &width, const double height);
     static Polygon2D rectangle_to_polygon2D(const double &width, const double height);
+    static void polygon_to_vectorsXY(const Polygon2D &polygon, std::vector<double> &vertices_x, std::vector<double> &vertices_y);
 
     void load_from_istream(std::istream &I);
     std::ostream &save_to_ostream(std::ostream &O)const;

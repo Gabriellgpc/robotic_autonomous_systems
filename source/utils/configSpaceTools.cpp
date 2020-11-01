@@ -45,7 +45,15 @@ Vector2D Config::get_pos() const
 }
 double Config::get_theta() const
 {
-    return my_theta;
+    double th = my_theta;
+    // making sure that theta in [0, 2pi]
+    if (th >= 2.0 * M_PI)
+        th -= 2.0*M_PI;
+
+    if(th < 0.0)
+        th += 2.0*M_PI;
+
+    return th;
 }
 
 Robot::Robot() : my_config(),
@@ -262,6 +270,10 @@ Polygon2D Polygon2D::translate(const Vector2D &trans) const
     }
     return result;
 }
+Polygon2D Polygon2D::translate(const double &x, const double &y)const
+{
+    return this->translate(Vector2D(x,y));
+}
 //retorna o poligono resultante da rotação do atual poligono em theta radianos
 Polygon2D Polygon2D::rotation(const double &theta) const
 {
@@ -374,7 +386,8 @@ bool Polygon2D::check_overlay(const Polygon2D &other) const
             return true;
     }
 
-    //testa se algum vertice deste poligono (this) esta dentro de Other
+    if(Polygon2D::check_convexity(other) == false)return false;
+    //testa se algum vertice deste poligono (this) esta dentro de Other (apenas dse other for convexo)
     for (my_vertices_it; my_vertices_it != my_vertices.end(); my_vertices_it++)
     {
         d = other.penetration_test(*my_vertices_it);
@@ -612,6 +625,23 @@ bool Polygon2D::check_convexity(const Polygon2D &poly)
     return true;
 }
 
+void Polygon2D::polygon_to_vectorsXY(const Polygon2D &polygon, std::vector<double> &vertices_x, std::vector<double> &vertices_y)
+{
+    auto vertices = polygon.get_vertices();
+
+    for (auto it = vertices.begin(); it != vertices.end(); it++)
+    {
+        vertices_x.push_back(it->x());
+        vertices_y.push_back(it->y());
+    }
+
+    if (vertices.size() > 1.0)
+    {
+        vertices_x.push_back(vertices.front().x());
+        vertices_y.push_back(vertices.front().y());
+    }
+}
+
 void Polygon2D::load_from_istream(std::istream &I)
 {
     Polygon2D poly_tmp;
@@ -743,10 +773,12 @@ std::list<Polygon2D> World::get_cobstacles(const unsigned int n_samples)
     double step_angle = 2.0 * M_PI / n_samples;
     double curr_th = my_robot.get_config().get_theta();
     //ira computar apenas se necessario os CBs
-    this->compute_c_obstacles(n_samples);
+    this->compute_c_obstacles(n_samples);    
 
     CB_index = round(curr_th / step_angle);
     CB_index = (CB_index >= n_samples)?n_samples-1:CB_index;
+
+    // printf("Theta = %lf => CB_index = %d\n", curr_th, CB_index);
 
     return my_CBs[CB_index];
 }
@@ -779,10 +811,18 @@ bool World::check_collision()
 
     cb_obstacles = this->get_cobstacles(my_n_samples);
 
+    int ob_id = 0;
     for(auto obstacle_it = cb_obstacles.begin(); obstacle_it != cb_obstacles.end() ; obstacle_it++)
     {
         if(obstacle_it->check_overlay(robot_point) == true)
+        {   
+            printf("Ponto (%lf , %lf) esta colidindo com o objetivo:%d\n", 
+                  my_robot.get_config().get_pos().x(),
+                  my_robot.get_config().get_pos().y(),
+                  ob_id);
             return true;
+        }
+        ob_id++;
     }
 
     return false;
