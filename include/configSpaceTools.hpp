@@ -1,6 +1,7 @@
 #pragma once
 #include <list>
 #include <tuple>
+#include <vector>
 #include <iostream>
 #include <string>
 
@@ -121,6 +122,7 @@ public:
     Robot(const Config &config, const Polygon2D &shape);
     Robot(const Vector2D &pos, const double &theta, const Polygon2D &shape);
 
+    bool set_shape(const Polygon2D &shape);
     void set_config(const Config &config);
     void translate(const Vector2D &t);
     void rotate(const double &phi);

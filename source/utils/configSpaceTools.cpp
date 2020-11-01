@@ -100,6 +100,15 @@ Polygon2D Robot::get_shape()const
     return my_shape;
 }
 
+bool Robot::set_shape(const Polygon2D &shape)
+{
+    if( Polygon2D::check_convexity(shape) == false )return false;
+
+    my_shape = shape;
+
+    return true;
+}
+
 /*********************************************************** Vector2D ***********************************************************/
 
 Vector2D::Vector2D() : _x(0.0),
@@ -737,6 +746,7 @@ std::list<Polygon2D> World::get_cobstacles(const unsigned int n_samples)
     this->compute_c_obstacles(n_samples);
 
     CB_index = round(curr_th / step_angle);
+    CB_index = (CB_index >= n_samples)?n_samples-1:CB_index;
 
     return my_CBs[CB_index];
 }

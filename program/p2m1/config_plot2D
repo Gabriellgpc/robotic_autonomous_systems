@@ -1,0 +1,8 @@
+set size square 1.0,1.0
+unset key
+set view equal xy
+set xr [-15:15]
+set yr [-15:15]
+set grid
+set xlabel 'x[m]'
+set ylabel 'y[m]'

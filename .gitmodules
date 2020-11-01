@@ -1,3 +1,6 @@
 [submodule "p1m3/matplotlib-cpp"]
 	path = source/matplotlib-cpp
 	url = https://github.com/lava/matplotlib-cpp
+[submodule "source/gnuplot-iostream"]
+	path = source/gnuplot-iostream
+	url = https://github.com/dstahlke/gnuplot-iostream
