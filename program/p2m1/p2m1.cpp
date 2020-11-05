@@ -13,17 +13,21 @@
 #include <thread>  //thread
 #include <omp.h>   //omp_get_wtime()
 
-#define SAMPLES 200
+// #define PLOT_CONFIG_SPACE
+
+unsigned int SAMPLES  = 200;
+double pioneer_radius = 0.52/2.0;
+unsigned int n_vertices = 8;
 #define GetCurrentDir getcwd
 #define STOP_TIME 120.0 //segundos
 
 using namespace std;
 
 void living_plot();
-void _init();
+void _init(int argc, char **argv);
 
 b0RemoteApi client("b0RemoteApi_CoppeliaSim-addOn", "b0RemoteApiAddOn");
-Robot robot(Config(-3.0,-2.0,M_PI/4.0), Polygon2D::circle_to_polygon2D(0.52/2.0, 4));
+Robot robot(Config(-3.0,-2.0,M_PI/4.0), Polygon2D::circle_to_polygon2D(pioneer_radius, n_vertices));
 World W(robot);
 char cCurrentPath[FILENAME_MAX];
 bool is_finished = false;
@@ -34,7 +38,7 @@ int main(int argc, char **argv)
     std::vector<float> pioneer_pos, pioneer_ori;
     int pioneer, leftMotor, rightMotor;   
     float w_r, w_l;
-    _init();
+    _init(argc, argv);
     
     pioneer = b0RemoteApi::readInt(client.simxGetObjectHandle("Pioneer_p3dx", client.simxServiceCall()), 1);
     leftMotor = b0RemoteApi::readInt(client.simxGetObjectHandle("Pioneer_p3dx_leftMotor", client.simxServiceCall()), 1);
@@ -59,13 +63,15 @@ int main(int argc, char **argv)
             break;
         }
 
-        //movimento circular
-        if(time <= 30.0){
-            pioneer_model(0.0, 2.0*M_PI/30.0, w_r, w_l);
-        }else//movimento linear
-        {
-            pioneer_model(0.2, 0.1, w_r, w_l);
-        }
+        pioneer_model(0.2, -0.1, w_r, w_l);
+
+        // //movimento circular
+        // if(time <= 30.0){
+        //     pioneer_model(0.0, 2.0*M_PI/30.0, w_r, w_l);
+        // }else//movimento linear
+        // {
+        //     pioneer_model(0.2, 0.1, w_r, w_l);
+        // }
         client.simxSetJointTargetVelocity(rightMotor, w_r, client.simxServiceCall());
         client.simxSetJointTargetVelocity(leftMotor,  w_l, client.simxServiceCall());
     }while(time <= STOP_TIME);
@@ -81,8 +87,24 @@ int main(int argc, char **argv)
     return 0;
 }
 
-void _init()
+void _init(int argc, char **argv)
 {
+    if(argc == 3)
+    {
+        SAMPLES = std::atoi(argv[1]);
+        n_vertices = std::atoi(argv[2]);
+
+        if((n_vertices % 2 != 0) || (n_vertices < 4)){
+            std::cerr << "Número de vertices deve ser uma potência de 2 a partir de 4\n";
+        }
+
+        robot.set_shape( Polygon2D::circle_to_polygon2D(pioneer_radius, n_vertices));
+        W.set_robot(robot);
+        printf("Theta com %d amostras e Robo aproximado por poligono com %d vertices\n", SAMPLES, n_vertices);
+    }else{
+        printf("Argumentos exigidos: quantidade de pontos em theta e numero de vertices para representar o robo\n");
+        printf("exemplo\n./p2m1 200 8\n");
+    }
     Polygon2D obstacle;
 
     bool r = GetCurrentDir(cCurrentPath, sizeof(cCurrentPath));
@@ -126,7 +148,7 @@ void _init()
         obstacle = Polygon2D::rectangle_to_polygon2D(5.0, 3.0);
         obstacle = obstacle.translate(0.0,2.75);
         W.add_obstacle(obstacle);
-        // Hexagono
+        // Octogono
         obstacle = Polygon2D::circle_to_polygon2D(1.0,8);
         obstacle = obstacle.translate(0.0,-0.5);
         W.add_obstacle(obstacle);
@@ -145,7 +167,7 @@ void living_plot()
 {
     std::list<Polygon2D> obstacles = W.get_obstacles();
     std::list<Polygon2D> cb_obstacles;
-    std::vector<double> x_vec, y_vec, x_robot, y_robot;
+    std::vector<double> x_vec, y_vec, z_vec, x_robot, y_robot, z_robot;
     std::vector<Config> config_hist;
     std::vector<std::tuple<
         std::vector<double>,
@@ -154,7 +176,7 @@ void living_plot()
     Gnuplot gp_work;
     Gnuplot gp_curr_config;
     auto plots_work = gp_work.plotGroup();
-    auto plots_config = gp_curr_config.plotGroup();
+    auto plots_curr_config = gp_curr_config.plotGroup();
 
     gp_work << "set title 'Espaço de trabalho'\n";
     gp_work << "load 'config_plot2D'\n";
@@ -175,7 +197,7 @@ void living_plot()
     while (is_finished == false)
     {
         auto plots_work = gp_work.plotGroup();
-        auto plots_config = gp_curr_config.plotGroup();
+        auto plots_curr_config = gp_curr_config.plotGroup();
 
         //objs
         plots_work.add_plot2d(pts_obs, "with filledcurve fc 'black'");
@@ -206,17 +228,51 @@ void living_plot()
             Polygon2D::polygon_to_vectorsXY(*cb_it, x_vec, y_vec);
             pts.emplace_back(std::make_tuple(x_vec, y_vec));
         }
-        plots_config.add_plot2d(pts, "with filledcurve fc 'black'");
+        plots_curr_config.add_plot2d(pts, "with filledcurve fc 'black'");
 
         // robot at config space
         pts.clear();
         pts.emplace_back(std::make_tuple(x_robot, y_robot));
-        plots_config.add_plot2d(pts, "with linespoints lc 'red' lt 7 lw 1");
+        plots_curr_config.add_plot2d(pts, "with linespoints lc 'red' lt 7 lw 1");
 
         //show plot
         gp_work << plots_work;
-        gp_curr_config << plots_config;
+        gp_curr_config << plots_curr_config;
     }
+
+
+    // ploting the 3D config space
+    #ifdef PLOT_CONFIG_SPACE
+    Gnuplot gp_config;
+    auto plots_config = gp_config.splotGroup();
+    std::vector<std::tuple< std::vector<double>, std::vector<double>, std::vector<double> >> pts_config;
+    gp_config << "load 'config_plot3D'\n";
+
+    x_robot.clear();y_robot.clear();z_robot.clear();
+    x_vec.clear();y_vec.clear();z_vec.clear();
+    for(int i = 0; i < SAMPLES; i++)
+    {   
+        double th = (2.0*M_PI/SAMPLES)*i;
+        W.update_config(Config(Vector2D(), th));
+        cb_obstacles = W.get_cobstacles();
+        
+        for(auto cb_it = cb_obstacles.begin(); cb_it != cb_obstacles.end(); cb_it++)
+        {   
+            x_vec.clear();y_vec.clear();
+            Polygon2D::polygon_to_vectorsXY(*cb_it, x_vec, y_vec);
+            z_vec = std::vector<double>(x_vec.size(), th);
+            pts_config.emplace_back(std::make_tuple(x_vec, y_vec, z_vec));
+        }
+        plots_config.add_plot2d(pts_config, "with polygons fc 'black'");
+        // x_robot.push_back(config_hist[i].get_pos().x());
+        // y_robot.push_back(config_hist[i].get_pos().y());
+        // z_robot.push_back(config_hist[i].get_theta());
+    }
+    // pts_config.clear();
+    // pts_config.emplace_back(std::make_tuple(x_robot,y_robot,z_robot));
+    // plots_config.add_plot2d(pts_config, "with lines");
+    gp_config << plots_config;
+    #endif
 
     std::cout << "Press enter to exit." << std::endl;
     std::cin.get();
