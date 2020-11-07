@@ -19,7 +19,7 @@ unsigned int SAMPLES  = 200;
 double pioneer_radius = 0.52/2.0;
 unsigned int n_vertices = 8;
 #define GetCurrentDir getcwd
-#define STOP_TIME 120.0 //segundos
+#define STOP_TIME 9999 //segundos
 
 using namespace std;
 
@@ -63,17 +63,17 @@ int main(int argc, char **argv)
             break;
         }
 
-        pioneer_model(0.2, -0.1, w_r, w_l);
+        // pioneer_model(0.2, -0.1, w_r, w_l);
 
-        // //movimento circular
+        //movimento circular
         // if(time <= 30.0){
         //     pioneer_model(0.0, 2.0*M_PI/30.0, w_r, w_l);
         // }else//movimento linear
         // {
         //     pioneer_model(0.2, 0.1, w_r, w_l);
         // }
-        client.simxSetJointTargetVelocity(rightMotor, w_r, client.simxServiceCall());
-        client.simxSetJointTargetVelocity(leftMotor,  w_l, client.simxServiceCall());
+        // client.simxSetJointTargetVelocity(rightMotor, w_r, client.simxServiceCall());
+        // client.simxSetJointTargetVelocity(leftMotor,  w_l, client.simxServiceCall());
     }while(time <= STOP_TIME);
 
     client.simxSetJointTargetVelocity(rightMotor, 0.0, client.simxServiceCall());
