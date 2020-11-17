@@ -12,7 +12,7 @@ LDFLAGS =	-L ${COPSIM_BASEDIR}/programming/bluezero/build \
 
 LDLIBS =	-fopenmp	-lpython3.8
 
-OBJS = utils.o	configSpaceTools.o
+OBJS = utils.o	configSpaceTools.o	potentialField.o
 LIBS = libutils.a
 
 all:	${LIBS}
@@ -20,6 +20,8 @@ all:	${LIBS}
 utils.o: utils.hpp utils.cpp
 
 configSpaceTools.o: configSpaceTools.hpp configSpaceTools.cpp
+
+potentialField.o:	potentialField.hpp potentialField.cpp
 
 libutils.a:	${OBJS}
 	ar r $@ $?

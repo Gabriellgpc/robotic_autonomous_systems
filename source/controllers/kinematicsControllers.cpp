@@ -9,79 +9,95 @@
 #include <cstdio>
 
 /************************************************************************************************/
-
-PathFollowController::PathFollowController(const double K_ang,
-                                           const double K_lin,
-                                           const double path_coef[]) : K_ang(K_ang),
-                                                                       K_lin(K_lin),
-                                                                       prev_lambda(0)
+PathFollowController::PathFollowController() : _K_ang(0),
+                                               _K_lin(0),
+                                               _prev_point(),
+                                               _points()
 {
-    std::memcpy(coef, path_coef, 8 * sizeof(double));
+}
+PathFollowController::PathFollowController(const double K_ang, const double K_lin, const std::list<Config> &points) : _K_ang(K_ang),
+                                                                                                                      _K_lin(K_lin),
+                                                                                                                      _points(points)
+{
+    _prev_point = _points.begin();
+}
+PathFollowController::PathFollowController(const double K_ang, const double K_lin) : _K_ang(K_ang),
+                                                                                     _K_lin(K_lin),
+                                                                                     _points()
+{
+    _prev_point = _points.begin();
+}
+PathFollowController::~PathFollowController()
+{
+    _K_ang = 0;
+    _K_lin = 0;
+    _points.clear();
+    _prev_point = _points.begin();
 }
 
-void PathFollowController::update(const double K_ang,
-                                  const double K_lin,
-                                  const double path_coef[])
-{
-    this->K_ang = K_ang;
-    this->K_lin = K_lin;
-    this->prev_lambda = 0.0;
-    std::memcpy(this->coef, path_coef, 8 * sizeof(double));
-}
-bool PathFollowController::step(const double x_curr, const double y_curr, const double th_curr,
+bool PathFollowController::step(const Config &curr_q,
                                 double &v, double &w,
-                                double &xref, double &yref, double &thref,
+                                Config &ref_q,
                                 double &lin_error, double &ang_error)
 {
     static double u;
     static double k; //x, y, theta e curvatura (kappa) no ponto sobre a curva
-    bool end = closestPoint(x_curr, y_curr, xref, yref, thref, k, lin_error);
-    ang_error = th_curr - thref;
+    
+    closestPoint(curr_q, ref_q, lin_error, k);
+    ang_error = curr_q.get_theta() - ref_q.get_theta();
 
-    u = -(K_ang * ang_error + K_lin * lin_error * v * sin(ang_error) / (ang_error + 0.01));
-    w = u + k * v * cos(ang_error) / (1.0 - k * lin_error);
+    u = -(_K_ang * ang_error + _K_lin * lin_error * v * sin(ang_error) / (ang_error + 0.01));
+    w = u;// + k * v * cos(ang_error) / (1.0 - k * lin_error);
 
-    if (end)
+    if ( (_points.back().get_pos() - curr_q.get_pos()).norm() <= 15.0e-2 )
     {
         v = 0;
         w = 0;
+        return true;
     }
-    return end;
+    return false;
 }
-// retorna o ponto mais proximo
-// retorna true se "acabou o caminho" (lambda >= 1)
-bool PathFollowController::closestPoint(const double &x_curr, const double &y_curr,
-                                        double &x, double &y, double &th, double &k, double &mindist)
+//update the  parameters
+void PathFollowController::update(const double K_ang, const double K_lin, const std::list<Config> &points)
+{
+    this->_K_ang = K_ang;
+    this->_K_lin = K_lin;
+    this->_points = points;
+    this->_prev_point = _points.begin();
+}
+void PathFollowController::closestPoint(const Config &q, Config &ref, double &mindist, double &kappa)
 {
     // N pontos
-    static const double step = 1.0 / 500.0;
-    static double lambda, x_diff, y_diff, dist;
-    static float xp, yp, thp; //x, y, theta no ponto sobre a curva
+    static double delta_x, delta_y, dist;
+    static double min_dist_used = 0.01;
+    static double prev_orientation;
+    Vector2D normal, point_to_q; //vetor normal ao segmento de reta; vetor saindo do waypoint ate a posicao atual
 
     mindist = 999999;
 
-    for (lambda = 0.0; lambda <= 1.0; lambda += step)
-    {
-        poly3(coef, lambda, xp, yp, thp);
-        x_diff = xp - x_curr;
-        y_diff = yp - y_curr;
-        dist = sqrt(x_diff * x_diff + y_diff * y_diff);
+    for(auto p = _prev_point; p != _points.end(); p++)
+    {   
+        delta_x = p->x() - q.x();
+        delta_y = p->y() - q.y();
+        dist = sqrt( delta_x*delta_x + delta_y*delta_y );
 
-        if (dist <= mindist)
-        {
-            x = xp;
-            y = yp;
-            th = thp;
-            k = curvature(coef, lambda);
-            this->prev_lambda = lambda;
+        if((dist <= mindist))
+        {   
+            if(q.get_pos() == p->get_pos())
+                continue;
+            ref = *p;
+            ref.theta() = atan2( ref.y() - _prev_point->y(), ref.x() - _prev_point->x());
+            
+            // WARNING: alterar para curvatura de uma função suave que interpole o ponto anteriro com o ponto atual
+            kappa = (ref.theta() - prev_orientation)/(( p->get_pos() - _prev_point->get_pos() ).norm() + 0.001);
+
             mindist = dist;
+            _prev_point = p;
+            prev_orientation = ref.theta();
         }
     }
-
-    if (this->prev_lambda >= 0.99)
-        return true;
-    return false;
 }
+
 /************************************************************************************************/
 
 TrajController::TrajController(const double _Kd, const double _Kp) : Kd(_Kd),
@@ -137,7 +153,7 @@ bool TrajController::step(const double currConfig[],
     if (!haveTraj)
         return true;
 
-    #define R 4.0
+#define R 4.0
 
     static double L, l, tmax, dt, t;
     static double Dx, DDx, Dy, DDy, th; //variaveis da trajetoria
@@ -158,7 +174,7 @@ bool TrajController::step(const double currConfig[],
         Dx = coef[1] + 2.0 * coef[2] * l + 3.0 * coef[3] * l * l;
         Dy = coef[5] + 2.0 * coef[6] * l + 3.0 * coef[7] * l * l;
         L = poly3Length(coef, 1.0);
-        
+
         //comprimento total do caminho => s(lambda = 1)
         prevTime = currTime;
         tmax = 2.0 * L / vmax;
@@ -201,7 +217,7 @@ bool TrajController::step(const double currConfig[],
     dx_curr = currConfig[3];
     dy_curr = currConfig[4];
     speed_curr = sqrt(dx_curr * dx_curr + dy_curr * dy_curr);
-    int_vel_robo += speed_curr*dt;
+    int_vel_robo += speed_curr * dt;
 
     dx = v_l * cos(th);
     dy = v_l * sin(th);
@@ -224,9 +240,9 @@ bool TrajController::step(const double currConfig[],
     w = wc;
 
     //fim da trajetoria
-    if ((t >= tmax) || (l >= 1.0) || (integral_vel >= (L - 0.01)) )
+    if ((t >= tmax) || (l >= 1.0) || (integral_vel >= (L - 0.01)))
     {
-        printf("dt =  %.4lf | t = %.4lf  | tmax = %0.4lf | dl = %.4lf | l = %.4lf | integral(v(t)) = %.4lf | integral(v_robot(t)) = %.4lf |L = %.4lf\n", dt, t, tmax, dl, l, integral_vel, int_vel_robo,L);
+        printf("dt =  %.4lf | t = %.4lf  | tmax = %0.4lf | dl = %.4lf | l = %.4lf | integral(v(t)) = %.4lf | integral(v_robot(t)) = %.4lf |L = %.4lf\n", dt, t, tmax, dl, l, integral_vel, int_vel_robo, L);
         v = 0.0;
         w = 0.0;
         return true;

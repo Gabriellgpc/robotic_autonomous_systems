@@ -1,6 +1,7 @@
 #pragma once
 #include "pid.hpp"
-// #include "common.hpp"
+#include <list>
+#include <configSpaceTools.hpp>
 
 // Seguidor de Caminho [Samson]
 // Descrição do robô em relação ao caminho:
@@ -12,22 +13,22 @@
 // caminho.
 class PathFollowController{
 public:
-    PathFollowController(const double K_ang,const double K_lin,const double path_coef[]);
+    PathFollowController();
+    PathFollowController(const double K_ang,const double K_lin, const std::list<Config> &points);
+    PathFollowController(const double K_ang,const double K_lin);
+    ~PathFollowController();
 
-    bool step(const double x_curr, const double y_curr, const double th_curr,
+    bool step(const Config &curr_q,
               double &v, double &w,
-              double &xref, double &yref, double &thref,
+              Config &ref_q,
               double &lin_error, double &ang_error);
-
     //update the  parameters
-    void update(const double K_ang,const double K_lin,const double path_coef[]);
-
-    bool closestPoint(const double &x_curr, const double &y_curr, 
-                      double &x, double &y, double &th, double &k, double &mindist);
+    void update(const double K_ang,const double K_lin, const std::list<Config> &points);
+    void closestPoint(const Config &q,  Config &ref, double &mindist, double &kappa);
 private:
-    double K_ang, K_lin;//ganho linear e ganho linear respectivamente
-    double coef[8];     //parametros do caminho (polinomio de grau 3)
-    double prev_lambda;
+    double _K_ang, _K_lin;//ganho linear e ganho linear respectivamente
+    std::list<Config> _points;
+    std::list<Config>::iterator _prev_point;
 };
 
 

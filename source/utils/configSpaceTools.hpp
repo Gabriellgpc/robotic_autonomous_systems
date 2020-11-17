@@ -7,6 +7,12 @@
 
 class Config;
 class Robot;
+class Vector2D;
+class World;
+class Polygon2D;
+
+std::ostream &operator<<(std::ostream &O, const Vector2D &v);
+std::ostream &operator<<(std::ostream &O, const Config &q);
 
 //Todas as unidades de medidas no padrão SI
 class Vector2D{
@@ -24,6 +30,8 @@ public:
 
     inline double x()const{return _x;}
     inline double y()const{return _y;}
+    inline double &x(){return _x;}
+    inline double &y(){return _y;}
     double operator()(unsigned int i)const;
     double operator[](unsigned int i)const;
     double &operator[](unsigned int i);
@@ -66,6 +74,7 @@ public:
 
     double penetration_test(const Vector2D &p)const;
     double distance(const Polygon2D &polygon)const;
+    double distance(const Vector2D &p)const;
     //retorna true caso tenha sobreposição entre os poligonos (entre this e other)
     bool check_overlay(const Polygon2D &other)const;
 
@@ -82,10 +91,16 @@ public:
     static Polygon2D rectangle_to_polygon2D(const double &width, const double height);
     static void polygon_to_vectorsXY(const Polygon2D &polygon, std::vector<double> &vertices_x, std::vector<double> &vertices_y);
 
+
     void load_from_istream(std::istream &I);
     std::ostream &save_to_ostream(std::ostream &O)const;
     bool save_to_file(const std::string fileName);
     bool load_from_file(const std::string fileName);
+    
+    double area();
+    Vector2D center();
+    //menor raio de circunferencia que envolve todo o poligono
+    double min_radius();
 private:
     std::list<Vector2D> my_vertices;
 };
@@ -108,6 +123,14 @@ public:
     void translate(const Vector2D &t);
     void rotate(const double &phi);
 
+    inline bool operator==(const Config &q)const{  return (my_pos == q.my_pos) && (get_theta() == q.get_theta());}
+
+    inline double &x() { return my_pos.x(); }
+    inline double &y() { return my_pos.y(); }
+    inline double &theta() { return my_theta; }
+    inline double x()const { return my_pos.x(); }
+    inline double y()const { return my_pos.y(); }
+    inline double theta()const { return my_theta; }
 
     Vector2D get_pos()const;
     double   get_theta()const;
@@ -129,7 +152,7 @@ public:
     void translate(const Vector2D &t);
     void rotate(const double &phi);
     
-    Polygon2D to_polygon2D();
+    Polygon2D to_polygon2D()const;
     Config get_config()const;
     Polygon2D get_shape()const;
 private:
@@ -142,8 +165,12 @@ private:
 class World{
 public:
     World(std::list<Polygon2D> &obstacles, const Robot &robot);
+    World();
+    World(const World &w);
     World(const Robot &robot);
     ~World();
+
+    void operator=(const World &w);
 
     void add_obstacle(const Polygon2D &obstacle);
     void update_config(const Config &config);
