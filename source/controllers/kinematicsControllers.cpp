@@ -42,14 +42,14 @@ bool PathFollowController::step(const Config &curr_q,
 {
     static double u;
     static double k; //x, y, theta e curvatura (kappa) no ponto sobre a curva
-    
+
     closestPoint(curr_q, ref_q, lin_error, k);
     ang_error = curr_q.get_theta() - ref_q.get_theta();
 
     u = -(_K_ang * ang_error + _K_lin * lin_error * v * sin(ang_error) / (ang_error + 0.0001));
-    w = u;// + k * v * cos(ang_error) / (1.0 - k * lin_error);
+    w = u; // + k * v * cos(ang_error) / (1.0 - k * lin_error);
 
-    if ( (_points.back().get_pos() - curr_q.get_pos()).norm() <= 15.0e-2 )
+    if ((_points.back().get_pos() - curr_q.get_pos()).norm() <= 15.0e-2)
     {
         v = 0;
         w = 0;
@@ -75,24 +75,24 @@ void PathFollowController::closestPoint(const Config &q, Config &ref, double &mi
 
     mindist = 999999;
 
-    for(auto p = _prev_point; p != _points.end(); p++)
-    {   
+    for (auto p = _prev_point; p != _points.end(); p++)
+    {
         delta_x = q.x() - p->x();
         delta_y = q.y() - p->y();
-        dist = sqrt( delta_x*delta_x + delta_y*delta_y );
+        dist = sqrt(delta_x * delta_x + delta_y * delta_y);
 
-        if((dist <= mindist) && (dist >= 1.0e-6))
-        {   
-            if(q.get_pos() == p->get_pos())
+        if ((dist <= mindist) && (dist >= 1.0e-6))
+        {
+            if (q.get_pos() == p->get_pos())
                 continue;
             ref = *p;
-            if( (ref.get_pos() - _prev_point->get_pos()).norm() > 1e-6)
-                ref.theta() = atan2( ref.y() - _prev_point->y(), ref.x() - _prev_point->x());
+            if ((ref.get_pos() - _prev_point->get_pos()).norm() > 1e-6)
+                ref.theta() = atan2(ref.y() - _prev_point->y(), ref.x() - _prev_point->x());
             else
-                ref.theta() = atan2( (++p)->get_pos().y() - ref.y(), (++p)->get_pos().y() - ref.x());
-            
+                ref.theta() = atan2((++p)->get_pos().y() - ref.y(), (++p)->get_pos().y() - ref.x());
+
             // WARNING: alterar para curvatura de uma função suave que interpole o ponto anteriro com o ponto atual
-            kappa = (ref.theta() - prev_orientation)/(( p->get_pos() - _prev_point->get_pos() ).norm() + 0.001);
+            kappa = (ref.theta() - prev_orientation) / ((p->get_pos() - _prev_point->get_pos()).norm() + 0.001);
 
             mindist = dist;
             _prev_point = p;
@@ -276,27 +276,24 @@ PositionController::PositionController(const double lin_Kp, const double lin_Ki,
 
 //distancia minima [m], utilizada como condicao de parada para o controlador de posicao
 #define MIN_DIST 0.09 //[m]
-bool PositionController::step(const double x_ref, const double y_ref,
-                              const double x_curr, const double y_curr, const double th_curr,
-                              double &u_v, double &u_w,
-                              double &lin_error, double &ang_error)
+bool PositionController::step(const Config &q_ref, const Config &q_curr)
 {
     static double delta_x, delta_y;
-    delta_x = x_ref - x_curr;
-    delta_y = y_ref - y_curr;
+    delta_x = q_ref.x() - q_curr.x();
+    delta_y = q_ref.y() - q_curr.y();
 
-    ang_error = atan2(delta_y, delta_x) - th_curr;
-    lin_error = sqrt(delta_x * delta_x + delta_y * delta_y) * cos(ang_error);
+    prev_ang_error = atan2(delta_y, delta_x) - q_curr.theta();
+    prev_lin_error = sqrt(delta_x * delta_x + delta_y * delta_y) * cos(prev_ang_error);
 
-    if (fabs(lin_error) <= MIN_DIST)
+    if (fabs(prev_lin_error) <= MIN_DIST)
     {
-        u_v = 0.0;
-        u_w = 0.0;
+        prev_v = 0.0;
+        prev_w = 0.0;
         this->reset();
         return true;
     }
-    u_v = lin_controller.step(lin_error);
-    u_w = ang_controller.step(ang_error);
+    prev_v = lin_controller.step(prev_lin_error);
+    prev_w = ang_controller.step(prev_ang_error);
 
     return false;
 }

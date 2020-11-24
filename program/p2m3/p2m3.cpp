@@ -138,7 +138,7 @@ void _init(int argc, char **argv)
     */
 
     //Criando obstaculos
-    {   
+    {
         /* //Exemplo 1
         // Octogono
         obstacle = Polygon2D::circle_to_polygon2D(1.0, 8);
@@ -157,7 +157,7 @@ void _init(int argc, char **argv)
         W.add_obstacle(obstacle);
         */
 
-       //Exemplo 3
+        //Exemplo 3
         obstacle = Polygon2D::circle_to_polygon2D(1.0, 8);
         obstacle = obstacle.translate(+4.9998e-02, +3.2500e-01);
         W.add_obstacle(obstacle);
@@ -165,8 +165,6 @@ void _init(int argc, char **argv)
         // obstacle = Polygon2D::circle_to_polygon2D(1.0, 8);
         // obstacle = obstacle.translate(+3.1000e+00,+9.7500e-01);
         // W.add_obstacle(obstacle);
-
-         
 
         // obstacle = Polygon2D::circle_to_polygon2D(1.0, 8);
         // obstacle = obstacle.translate(-3.0750e+00, -2.2500e-01);
