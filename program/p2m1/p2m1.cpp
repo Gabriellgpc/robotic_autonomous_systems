@@ -65,15 +65,15 @@ int main(int argc, char **argv)
 
         // pioneer_model(0.2, -0.1, w_r, w_l);
 
-        //movimento circular
-        // if(time <= 30.0){
-        //     pioneer_model(0.0, 2.0*M_PI/30.0, w_r, w_l);
-        // }else//movimento linear
-        // {
-        //     pioneer_model(0.2, 0.1, w_r, w_l);
-        // }
-        // client.simxSetJointTargetVelocity(rightMotor, w_r, client.simxServiceCall());
-        // client.simxSetJointTargetVelocity(leftMotor,  w_l, client.simxServiceCall());
+        // movimento circular
+        if(time <= 30.0){
+            pioneer_model(0.0, 2.0*M_PI/30.0, w_r, w_l);
+        }else//movimento linear
+        {
+            pioneer_model(0.2, 0.1, w_r, w_l);
+        }
+        client.simxSetJointTargetVelocity(rightMotor, w_r, client.simxServiceCall());
+        client.simxSetJointTargetVelocity(leftMotor,  w_l, client.simxServiceCall());
     }while(time <= STOP_TIME);
 
     client.simxSetJointTargetVelocity(rightMotor, 0.0, client.simxServiceCall());

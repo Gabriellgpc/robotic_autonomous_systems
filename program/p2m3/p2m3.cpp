@@ -36,7 +36,7 @@ bool is_finished = false;
 
 double v = 0.1;
 double K_lin = 0.5;
-double K_ang = 2.0;
+double K_ang = 1.6;
 PathFollowController controller(K_ang, K_lin);
 std::list<Config> path;
 
@@ -95,6 +95,11 @@ int main(int argc, char **argv)
 
         client.simxSetJointTargetVelocity(rightMotor, w_r, client.simxServiceCall());
         client.simxSetJointTargetVelocity(leftMotor, w_l, client.simxServiceCall());
+
+        std::cout << "REF = " << ref << " | ";
+        printf("Angular Error = %lf | Linear Error = %lf \n", ang_error, lin_error);
+        // client.simxSetJointTargetVelocity(rightMotor, 0.0, client.simxServiceCall());
+        // client.simxSetJointTargetVelocity(leftMotor, 0.0, client.simxServiceCall());
     } while ((time <= STOP_TIME) && (is_finished == false));
 
     client.simxSetJointTargetVelocity(rightMotor, 0.0, client.simxServiceCall());
@@ -124,18 +129,44 @@ void _init(int argc, char **argv)
     }
     Polygon2D obstacle;
 
+    /*
     bool r = GetCurrentDir(cCurrentPath, sizeof(cCurrentPath));
     if (!r)
         std::cerr << "Falha ao carregar o cenário!\n";
     std::string scene = string(cCurrentPath) + string("/scenes/p2m1_scene.ttt");
     client.simxLoadScene(scene.c_str(), client.simxServiceCall());
+    */
 
     //Criando obstaculos
-    {
+    {   
+        /* //Exemplo 1
         // Octogono
         obstacle = Polygon2D::circle_to_polygon2D(1.0, 8);
         obstacle = obstacle.translate(-5.7500e-01, -1.7500e-01);
         W.add_obstacle(obstacle);
+        */
+
+        //Exemplo 2
+        /*
+        obstacle = Polygon2D::circle_to_polygon2D(1.0, 8);
+        obstacle = obstacle.translate(-1.1500e+00, +1.4000e+00);
+        W.add_obstacle(obstacle);
+
+        obstacle = Polygon2D::circle_to_polygon2D(1.0, 8);
+        obstacle = obstacle.translate(+9.2500e-01,+4.9999e-02);
+        W.add_obstacle(obstacle);
+        */
+
+       //Exemplo 3
+        obstacle = Polygon2D::circle_to_polygon2D(1.0, 8);
+        obstacle = obstacle.translate(+4.9998e-02, +3.2500e-01);
+        W.add_obstacle(obstacle);
+
+        // obstacle = Polygon2D::circle_to_polygon2D(1.0, 8);
+        // obstacle = obstacle.translate(+3.1000e+00,+9.7500e-01);
+        // W.add_obstacle(obstacle);
+
+         
 
         // obstacle = Polygon2D::circle_to_polygon2D(1.0, 8);
         // obstacle = obstacle.translate(-3.0750e+00, -2.2500e-01);

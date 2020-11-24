@@ -55,7 +55,7 @@ Config PotentialField::repulsive_force(const Polygon2D &obj, const Robot &robot)
 {
     Config fr(0, 0, 0);
     Polygon2D c_obstacle = obj.work_to_config_space(robot.to_polygon2D());
-    double min_dist = c_obstacle.min_radius() * 4.0;
+    double min_dist = c_obstacle.min_radius() * 2.0;
 
     Vector2D robot_to_cb = c_obstacle.center() - robot.get_config().get_pos();
     double dist = robot_to_cb.norm();
@@ -89,7 +89,7 @@ std::list<Config> PotentialField::get_planned_path(const Config &q,
     Config f_result, f_atr, f_rp;
     double curr_config_dist = 99999.0;
     Config curr_q = q;
-    Config prev_q;
+    Config prev_q = q;
 
     while (curr_config_dist >= min_dist_to_qf)
     {
@@ -121,7 +121,6 @@ std::list<Config> PotentialField::get_planned_path(const Config &q,
         curr_q.theta() = curr_q.theta() - (ksi / R) * f_result.theta();
 
         curr_config_dist = config_dist(curr_q, qf, R);
-        // std::cout << "Config dist = " << curr_config_dist << '\n';
         if (prev_q == curr_q)
         {
             std::cout << "Minimo local!\n";
