@@ -48,10 +48,13 @@ void Simulation_p3m2::stop_simulation()
         client->simxStopSimulation(client->simxServiceCall());
         delete client;
     }
+    my_occup_grid.save_to_file("occupating_grid.save");
 }
 
 void Simulation_p3m2::start_simulation(const std::string &scene, const float &time_to_stop)
 {
+    my_occup_grid.load_from_file("occupating_grid.save");
+    
     this->stop_simulation();
     this->to_stop = false;
 

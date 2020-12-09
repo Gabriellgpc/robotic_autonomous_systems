@@ -1,6 +1,7 @@
 #include "occupating_grid.hpp"
 #include <cmath>
-#include <cstring>
+#include <string>
+#include <fstream>
 
 ProximitySensorInfo::ProximitySensorInfo(const float &min_range, 
                                          const float &max_range, 
@@ -94,6 +95,64 @@ double OccupationGrid::_inverse_model(const CellGrid &mi, const ProximitySensorI
         return l_L;
     
     return l_0;
+}
+
+std::istream& CellGrid::load_from_stream(std::istream &I)
+{
+    I >> this->pos.x();
+    I >> this->pos.y();
+    I >> this->l;
+    I >> this->p;
+
+    return I;
+}
+std::ostream& CellGrid::save_to_stream(std::ostream &O)
+{
+    O <<'\n'<< this->pos.x(); 
+    O <<' ' << this->pos.y();
+    O <<' ' << this->l;
+    O <<' ' << this->p;
+
+    return O;
+}
+
+void OccupationGrid::save_to_file(const std::string file)
+{
+    std::ofstream out(file);
+
+    if(out.is_open() == false)
+    {
+        std::cerr << "Falha ao salvar a Grade de Ocupação em arquivo\n";
+        return;
+    }
+
+    out << map.size() << '\n';
+    for(int i = 0; i < map.size(); i++)
+        map[i].save_to_stream(out);
+    out.close();
+}
+void OccupationGrid::load_from_file(const std::string file)
+{
+    std::ifstream in(file);
+    std::size_t ncells;
+    CellGrid cell_tmp;
+
+    if(in.is_open() == false)
+    {
+        std::cerr << "Falha ao ler a Grade de Ocupação do arquivo\n";
+        return;
+    }
+
+    in >> ncells;
+
+    map.resize(ncells);
+    for(int i = 0; i < map.size(); i++)
+    {
+        cell_tmp.load_from_stream(in);
+        map[i] = cell_tmp;
+    }
+
+    in.close();
 }
 
 double log_odd(const double &p)

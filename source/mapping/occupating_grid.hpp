@@ -1,10 +1,12 @@
 #pragma once
 #include <configSpaceTools.hpp> //Vector2D, Config
 #include <vector>
+#include <string>
+#include <iostream>
 
 constexpr double l_0 = 0.0;//iniciar ocupados
 constexpr double l_oc= 0.5;//incremento em log odd para celulas provavelmente ocupadas
-constexpr double l_L =-0.5;//incremento para log odd para celulas provavelmente nao ocupadas
+constexpr double l_L =-0.7;//incremento para log odd para celulas provavelmente nao ocupadas
 
 double log_odd(const double &p);
 double inv_log_odd(const double &l);
@@ -60,6 +62,9 @@ public:
     Vector2D pos;
     double l;
     double p;
+
+    std::istream &load_from_stream(std::istream &I);
+    std::ostream &save_to_stream(std::ostream &O);
 };
 
 class OccupationGrid
@@ -71,6 +76,9 @@ public:
     
     void update(const ProximitySensorInfo& sensor, const Config & q);
     inline std::vector<CellGrid> get_OG()const { return map; }
+
+    void save_to_file(const std::string file);
+    void load_from_file(const std::string file);
 private:
     std::vector<CellGrid> map;
 
