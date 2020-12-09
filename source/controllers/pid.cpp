@@ -18,7 +18,7 @@ void PID::reset()
 {
     integral = 0.0;
     deriv    = 0.0,
-    prevTime = 0.0;
+    // prevTime = 0.0;
     prevError= 0.0;
     inited   = false;
 }

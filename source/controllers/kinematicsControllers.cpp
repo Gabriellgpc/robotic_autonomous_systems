@@ -275,7 +275,7 @@ PositionController::PositionController(const double lin_Kp, const double lin_Ki,
 */
 
 //distancia minima [m], utilizada como condicao de parada para o controlador de posicao
-#define MIN_DIST 0.09 //[m]
+#define MIN_DIST 0.1 //[m]
 bool PositionController::step(const Config &q_ref, const Config &q_curr)
 {
     static double delta_x, delta_y;

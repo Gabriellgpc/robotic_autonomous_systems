@@ -181,11 +181,7 @@ double Vector2D::dot(const Vector2D &other) const
 //retorna o angulo (theta) do vetor com relação ao eixo x positivo. theta in [0, 2pi]
 double Vector2D::ang() const
 {
-    double ang = atan2(this->_y, this->_x); //[-pi, pi]
-    if (fabs(ang) < 1.0e-9)
-        return 0.0;
-    if (ang < 0.0)
-        ang += 2 * M_PI;
+    double ang = atan2(this->_y, this->_x) + 2.0*M_PI;
     return ang;
 }
 double Vector2D::ang(const Vector2D &other) const
