@@ -12,7 +12,7 @@
 #include <atomic> //std::atomic
 
 //limiar usado para considerar uma celula ocupada
-constexpr double occupating_thr = 0.5;
+constexpr double occupating_thr = 0.1;
 //Numero de sensores
 constexpr int N_SENSORS = 4;
 const std::string nodeName = std::string("b0RemoteApi_CoppeliaSim-addOn");
@@ -22,10 +22,6 @@ const std::string channelName = std::string("b0RemoteApiAddOn");
 struct MyDatas
 {
     Config q;
-    ProximitySensorInfo sensors[4] = {ProximitySensorInfo(0.1, 5.0, 60.0*M_PI/180.0, 0, 0.1), 
-                                      ProximitySensorInfo(0.1, 5.0, 60.0*M_PI/180.0, M_PI_2, 0.1),
-                                      ProximitySensorInfo(0.1, 5.0, 60.0*M_PI/180.0, M_PI_2*2, 0.1),
-                                      ProximitySensorInfo(0.1, 5.0, 60.0*M_PI/180.0, -M_PI_2, 0.1)};
 };
 
 class Simulation_p3m3
@@ -49,7 +45,6 @@ private:
     int handle_pioneer;
     int handle_leftMotor;
     int handle_rightMotor;
-    int handle_sensor[N_SENSORS];
 
     void _plotter_routine();
     void _receiver_routine();
@@ -61,6 +56,4 @@ private:
 
     friend void _receiver_func(void *X);
     friend void _plotter_func(void *X);
-
-    void _sensor_to_world_frame(MyDatas &datas);
 };

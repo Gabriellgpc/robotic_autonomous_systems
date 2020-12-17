@@ -45,7 +45,6 @@ void Simulation_p3m1::stop_simulation()
     if (client != nullptr)
     {
         client->simxStopSimulation(client->simxServiceCall());
-        delete client;
     }
 }
 
