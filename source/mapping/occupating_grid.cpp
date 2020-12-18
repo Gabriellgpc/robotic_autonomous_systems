@@ -37,11 +37,14 @@ void ProximitySensorInfo::updateMeasure(const float& measure_dist, const Vector2
 //grade com width e height composta de celulas quadradas com size_cell de lado
 OccupationGrid::OccupationGrid(const float &width, 
                                const float &height, 
-                               const float& size_cell)
-{
+                               const float& size_cell):
+_width(width),
+_height(height),
+_size_cell(size_cell)
+{   
     int map_height   = static_cast<int>(round(height/size_cell));
     int map_width    = static_cast<int>(round(width/size_cell));
-    this->map = std::vector<CellGrid>(map_height*map_width);
+    this->map = std::vector<OccupationGridCell>(map_height*map_width);
 
     int xi,yi;
     for(int i = 0; i < this->map.size(); i++)
@@ -74,7 +77,7 @@ void OccupationGrid::update(const ProximitySensorInfo& sensor, const Config & q)
     }
 }
 
-double OccupationGrid::_inverse_model(const CellGrid &mi, const ProximitySensorInfo &z, const Config& q)
+double OccupationGrid::_inverse_model(const OccupationGridCell &mi, const ProximitySensorInfo &z, const Config& q)
 {
     static float r;
     static float phi;
@@ -97,7 +100,7 @@ double OccupationGrid::_inverse_model(const CellGrid &mi, const ProximitySensorI
     return l_0;
 }
 
-std::istream& CellGrid::load_from_stream(std::istream &I)
+std::istream& OccupationGridCell::load_from_stream(std::istream &I)
 {
     I >> this->pos.x();
     I >> this->pos.y();
@@ -106,7 +109,7 @@ std::istream& CellGrid::load_from_stream(std::istream &I)
 
     return I;
 }
-std::ostream& CellGrid::save_to_stream(std::ostream &O)
+std::ostream& OccupationGridCell::save_to_stream(std::ostream &O)
 {
     O <<'\n'<< this->pos.x(); 
     O <<' ' << this->pos.y();
@@ -135,7 +138,7 @@ void OccupationGrid::load_from_file(const std::string file)
 {
     std::ifstream in(file);
     std::size_t ncells;
-    CellGrid cell_tmp;
+    OccupationGridCell cell_tmp;
 
     if(in.is_open() == false)
     {

@@ -56,7 +56,7 @@ private:
     Vector2D sensor_measure_point;
 };
 
-class CellGrid
+class OccupationGridCell
 {
 public:
     Vector2D pos;
@@ -75,13 +75,23 @@ public:
     ~OccupationGrid();
     
     void update(const ProximitySensorInfo& sensor, const Config & q);
-    inline std::vector<CellGrid> get_OG()const { return map; }
+    
+    inline std::vector<OccupationGridCell> get_OG()const { return map; }
+    inline std::size_t size()const { return map.size(); }
+    inline OccupationGridCell operator[](const uint32_t &i)const { return map[i];}
+
+    inline float get_width()const { return _width; }
+    inline float get_height()const { return _height; }
+    inline float get_size_cell()const { return _size_cell; }
 
     void save_to_file(const std::string file);
     void load_from_file(const std::string file);
 private:
-    std::vector<CellGrid> map;
+    std::vector<OccupationGridCell> map;
+    float _width;
+    float _height;
+    float _size_cell;
 
     //modelo inverso simples de um sensor de proximidade
-    double _inverse_model(const CellGrid &mi, const ProximitySensorInfo &z, const Config& q);
+    double _inverse_model(const OccupationGridCell &mi, const ProximitySensorInfo &z, const Config& q);
 };
