@@ -11,7 +11,7 @@ LDFLAGS =	-L ${COPSIM_BASEDIR}/programming/bluezero/build\
 		    -L ${BASEDIR}/lib
 
 LDLIBS = -lpthread	-lb0	-fopenmp -lpython3.8	-lcontroller	-lutils	-lb0RemoteApi\
-		 -lutil -lboost_iostreams -lboost_system -lboost_filesystem	-lmapping
+		 -lutil -lboost_iostreams -lboost_system -lboost_filesystem	-lmapping	-lplanning
 
 PROGRAM = main
 

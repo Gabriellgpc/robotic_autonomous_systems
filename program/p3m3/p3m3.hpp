@@ -2,7 +2,8 @@
 #include <b0RemoteApi.h>             //para comunicação com o coppeliaSim via Blue-zero
 #include <utils.hpp>                 //pioneer_model
 #include <configSpaceTools.hpp>      //Polygon2D, Robot, World, Vector2D, Config
-#include <occupating_grid.hpp>       //OccupationGrid, CellGrid, ProximitySensorInfo
+#include <occupating_grid.hpp>       //OccupationGrid, OccupationCell, ProximitySensorInfo
+#include <planning.hpp>              //manhattan, depthfirst, RegularGrid, CellGrid
 
 #include <thread> //std::thread
 #include <vector> //std::vector
