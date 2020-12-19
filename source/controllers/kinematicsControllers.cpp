@@ -42,12 +42,17 @@ bool PathFollowController::step(const Config &curr_q,
 {
     static double u;
     static double k; //x, y, theta e curvatura (kappa) no ponto sobre a curva
+    static double coef[8];
 
     closestPoint(curr_q, ref_q, lin_error, k);
     ang_error = curr_q.get_theta() - ref_q.get_theta();
 
     u = -(_K_ang * ang_error + _K_lin * lin_error * v * sin(ang_error) / (ang_error + 0.0001));
-    w = u; // + k * v * cos(ang_error) / (1.0 - k * lin_error); 
+    // w = u; // + k * v * cos(ang_error) / (1.0 - k * lin_error); 
+    pathComputing(curr_q.x(), curr_q.y(), curr_q.theta(), 
+                  ref_q.x(), ref_q.y(), ref_q.theta(), coef);
+    k = curvature(coef, 1);
+    w = u + k* v * cos(ang_error) / (1.0 - k * lin_error);
 
     if ((_points.back().get_pos() - curr_q.get_pos()).norm() <= 30.0e-2)
     {
