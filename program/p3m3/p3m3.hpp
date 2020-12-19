@@ -20,8 +20,8 @@ constexpr double occupating_thr = 0.1;
 const std::string nodeName = std::string("b0RemoteApi_CoppeliaSim-addOn");
 const std::string channelName = std::string("b0RemoteApiAddOn");
 
-constexpr double K_ang = 0.5;
-constexpr double K_lin = 1.0;
+// constexpr double K_lin = 1.0;
+// constexpr double K_ang = 0.1;
 
 struct MyDatas
 {
@@ -34,17 +34,14 @@ public:
     Simulation_p3m3();
     ~Simulation_p3m3();
     //método que lançará as threads e iniciará a simulação
-    void start_simulation(const std::string &scene, const float &time_to_stop);
+    void start_simulation(const std::string &scene, const double K_ang, const double K_lin);
     void stop_simulation();
 private:
     std::thread thr_plotter;  //thread responsável pela plotagem dinâmica
     std::thread thr_receiver; //thread responsável por receber os dados da simulação
-    std::thread thr_controller; //thread responsável por receber os dados da simulação
     std::mutex  mtx; //mutex para acesso a configuração atual
 
     b0RemoteApi *client;
-
-    std::atomic<float> time_to_stop; //[s]
     std::atomic<bool> to_stop;
 
     int handle_pioneer;
@@ -57,7 +54,8 @@ private:
 
     void _readDatas();
 
-    std::queue<MyDatas> myqueue;
+    std::queue<MyDatas> my_qplot;
+    std::queue<MyDatas> my_qcontrol;
     OccupationGrid my_prob_occup_grid;
     RegularGrid    my_regular_grid;
     Robot          my_robot;

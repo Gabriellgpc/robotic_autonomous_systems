@@ -8,6 +8,7 @@ void _receiver_func(void *X)
 {
     static_cast<Simulation_p3m3 *>(X)->_receiver_routine();
 };
+
 void _plotter_func(void *X)
 {
     static_cast<Simulation_p3m3 *>(X)->_plotter_routine();
@@ -17,17 +18,16 @@ Simulation_p3m3::Simulation_p3m3() : thr_plotter(),
                                      thr_receiver(),
                                      mtx(),
                                      client(nullptr),
-                                     time_to_stop(0.0),
                                      to_stop(false),
                                      handle_pioneer(),
                                      handle_leftMotor(),
                                      handle_rightMotor(),
-                                     myqueue(),
+                                     my_qplot(),
                                      my_prob_occup_grid(20, 20, 0.1),
                                      my_regular_grid(Vector2D(0, 0), 20, 20, 0.1),
                                      my_path_cell(),
                                      my_path_follower()
-{   
+{
     my_robot = Robot(Config(0, 0, 0), Polygon2D::rectangle_to_polygon2D(5.1900e-01, 4.1500e-01));
     mtx.unlock();
 }
@@ -50,20 +50,20 @@ void Simulation_p3m3::stop_simulation()
     {
         client->simxStopSimulation(client->simxServiceCall());
     }
-    // my_occup_grid.save_to_file("occupating_grid.save");
 }
 
-void Simulation_p3m3::start_simulation(const std::string &scene, const float &time_to_stop)
+void Simulation_p3m3::start_simulation(const std::string &scene,
+                                       const double K_ang,
+                                       const double K_lin)
 {
-    std::vector<float> target_pos;
-
+    std::vector<float> target_pos, pioneer_pos, pioneer_ori;
+    MyDatas data;
     my_prob_occup_grid.load_from_file("occupating_grid.save");
 
     this->stop_simulation();
     this->to_stop = false;
 
     client = new b0RemoteApi(nodeName.c_str(), channelName.c_str());
-    this->time_to_stop = time_to_stop;
 
     if (!scene.empty())
         client->simxLoadScene(scene.c_str(), client->simxServiceCall());
@@ -75,21 +75,26 @@ void Simulation_p3m3::start_simulation(const std::string &scene, const float &ti
     handle_rightMotor = b0RemoteApi::readInt(client->simxGetObjectHandle("Pioneer_p3dx_rightMotor", client->simxServiceCall()), 1);
     handle_target = b0RemoteApi::readInt(client->simxGetObjectHandle("Target", client->simxServiceCall()), 1);
 
-    _readDatas();
-
+    b0RemoteApi::readFloatArray(client->simxGetObjectPosition(handle_pioneer, -1, client->simxServiceCall()), pioneer_pos, 1);
+    b0RemoteApi::readFloatArray(client->simxGetObjectOrientation(handle_pioneer, -1, client->simxServiceCall()), pioneer_ori, 1);
     b0RemoteApi::readFloatArray(client->simxGetObjectPosition(handle_target, -1, client->simxServiceCall()), target_pos, 1);
 
-    my_regular_grid = manhattan( my_prob_occup_grid, Config(target_pos[0], target_pos[1], 0),  my_robot, occupating_thr);
-    my_path_cell = bestFirst( my_regular_grid, myqueue.front().q, Config(target_pos[0], target_pos[1], 0));
-    
-    if(my_path_cell.empty())
+    data.q = Config(pioneer_pos[0], pioneer_pos[1], pioneer_ori[2]);
+    my_qplot.push(data);
+
+    my_regular_grid = manhattan(my_prob_occup_grid, Config(target_pos[0], target_pos[1], 0), my_robot, occupating_thr);
+    my_path_cell = bestFirst(my_regular_grid, my_qplot.front().q, Config(target_pos[0], target_pos[1], 0));
+
+    if (my_path_cell.empty())
     {
         std::cerr << "Falha ao encontrar um caminho\n";
         to_stop = true;
-    }else{
+    }
+    else
+    {
         std::list<Config> points;
-        for(auto cell : my_path_cell)
-            points.push_back( Config(cell.pos,0) );
+        for (auto cell : my_path_cell)
+            points.push_back(Config(cell.pos, 0));
         my_path_follower.update(K_ang, K_lin, points);
     }
 
@@ -101,22 +106,10 @@ void Simulation_p3m3::start_simulation(const std::string &scene, const float &ti
 }
 void Simulation_p3m3::_receiver_routine()
 {
-    double tik, tok;
-
-    tik = omp_get_wtime();
-    tok = omp_get_wtime();
     while (to_stop == false)
     {
-        if ((tok - tik) >= time_to_stop)
-        {
-            std::cerr << "Time out!\n";
-            to_stop = true;
-            continue;
-        }
         _readDatas();
-        tok = omp_get_wtime();
     }
-
     std::cout << "Receiver parou!\n";
 }
 
@@ -126,6 +119,10 @@ void Simulation_p3m3::_readDatas()
     static bool r_pos, r_ori;
     static std::vector<float> pos({0, 0}), ori({0, 0, 0});
     static std::vector<float> target_pos({0, 0});
+    static Config qref;
+    static double v, w, lerror, aerror;
+    static float w_r, w_l;
+    static bool done = false;
 
     r_pos = b0RemoteApi::readFloatArray(client->simxGetObjectPosition(handle_pioneer, -1, client->simxServiceCall()), pos, 1);
     r_ori = b0RemoteApi::readFloatArray(client->simxGetObjectOrientation(handle_pioneer, -1, client->simxServiceCall()), ori, 1);
@@ -138,10 +135,24 @@ void Simulation_p3m3::_readDatas()
     //atualiza a configuração atual
     datas.q.set_pos(pos[0], pos[1]);
     datas.q.set_theta(ori[2]);
-    //coloca na fila compartilhada
+
+    done = my_path_follower.step(datas.q, v, w, qref, lerror, aerror);
+
+    pioneer_model(0.3, w, w_r, w_l);
+    client->simxSetJointTargetVelocity(handle_rightMotor, w_r, client->simxServiceCall());
+    client->simxSetJointTargetVelocity(handle_leftMotor, w_l, client->simxServiceCall());
+
+    //coloca na fila para plot
     mtx.lock(); //LOCK
-    myqueue.push(datas);
+    my_qplot.push(datas);
     mtx.unlock(); //UNLOCK
+
+    if(done)
+    {
+        to_stop = true;
+        client->simxSetJointTargetVelocity(handle_rightMotor, 0, client->simxServiceCall());
+        client->simxSetJointTargetVelocity(handle_leftMotor, 0, client->simxServiceCall());
+    }
 }
 
 void Simulation_p3m3::_plotter_routine()
@@ -199,8 +210,8 @@ void Simulation_p3m3::_plotter_routine()
     z_vec.clear();
     pts3D.clear();
     for (std::size_t i = 0; i < my_regular_grid.size(); i++)
-    {   
-        if(abs(my_regular_grid[i].value) == M)
+    {
+        if (abs(my_regular_grid[i].value) == M)
             z_vec.push_back(0);
         else
             z_vec.push_back(my_regular_grid[i].value);
@@ -226,14 +237,15 @@ void Simulation_p3m3::_plotter_routine()
         //Atualiza dados
         {
             mtx.lock();
-            while (myqueue.empty()) //sem dados novos na fila
+            while (my_qplot.empty()) //sem dados novos na fila
             {
                 mtx.unlock();
                 std::this_thread::yield();
+                usleep(500*1000);
                 mtx.lock();
             }
-            datas = myqueue.front(); //novos dados
-            myqueue.pop();
+            datas = my_qplot.front(); //novos dados
+            my_qplot.pop();
             mtx.unlock();
         }
 

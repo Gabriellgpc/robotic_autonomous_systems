@@ -1,12 +1,18 @@
 #include "p3m3.hpp"
+#include <string>
 
 
 int main(int argc, char*argv[])
 {
     Simulation_p3m3 sim;
 
+    if(argc != 3)
+    {
+        std::cout << "Informe o ganho angular e linear para o controlador seguidor de caminho.\n";
+    }
+
     std::cout << "Running...\n";
-    sim.start_simulation("scenes/p3m3.ttt", 9999999);
+    sim.start_simulation("/scenes/p3m3.ttt", std::stod(argv[1]), std::stod(argv[2]));
 
     std::cout << "Press enter to stop the simulation." << std::endl;
     std::cin.get();

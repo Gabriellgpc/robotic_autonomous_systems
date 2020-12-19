@@ -47,9 +47,9 @@ bool PathFollowController::step(const Config &curr_q,
     ang_error = curr_q.get_theta() - ref_q.get_theta();
 
     u = -(_K_ang * ang_error + _K_lin * lin_error * v * sin(ang_error) / (ang_error + 0.0001));
-    w = u; // + k * v * cos(ang_error) / (1.0 - k * lin_error);
+    w = u; // + k * v * cos(ang_error) / (1.0 - k * lin_error); 
 
-    if ((_points.back().get_pos() - curr_q.get_pos()).norm() <= 15.0e-2)
+    if ((_points.back().get_pos() - curr_q.get_pos()).norm() <= 30.0e-2)
     {
         v = 0;
         w = 0;
@@ -75,24 +75,27 @@ void PathFollowController::closestPoint(const Config &q, Config &ref, double &mi
 
     mindist = 999999;
 
-    for (auto p = _prev_point; p != _points.end(); p++)
+    for (auto p = _points.begin(); p != _points.end(); p++)
     {
         delta_x = q.x() - p->x();
         delta_y = q.y() - p->y();
         dist = sqrt(delta_x * delta_x + delta_y * delta_y);
 
-        if ((dist <= mindist) && (dist >= 1.0e-6))
+        if ((dist <= mindist) && (dist >= 1.0e-3))
         {
             if (q.get_pos() == p->get_pos())
                 continue;
             ref = *p;
-            if ((ref.get_pos() - _prev_point->get_pos()).norm() > 1e-6)
-                ref.theta() = atan2(ref.y() - _prev_point->y(), ref.x() - _prev_point->x());
+            if( (++p) !=  _points.end())
+                ref.theta() = atan2((p)->get_pos().y() - ref.y(), (p)->get_pos().x() - ref.x());
             else
-                ref.theta() = atan2((++p)->get_pos().y() - ref.y(), (++p)->get_pos().y() - ref.x());
+                ref.theta() = atan2(_points.front().get_pos().y() - ref.y(), _points.front().get_pos().x() - ref.x());
+            // if ((ref.get_pos() - _prev_point->get_pos()).norm() > 1e-6)
+            //     ref.theta() = atan2(ref.y() - _prev_point->y(), ref.x() - _prev_point->x());
+            // else
 
-            // WARNING: alterar para curvatura de uma função suave que interpole o ponto anteriro com o ponto atual
-            kappa = (ref.theta() - prev_orientation) / ((p->get_pos() - _prev_point->get_pos()).norm() + 0.001);
+            // WARNING: alterar para curvatura de uma função suave que interpole o ponto anterior com o ponto atual
+            // kappa = (ref.theta() - prev_orientation) / ((p->get_pos() - _prev_point->get_pos()).norm() + 0.001);
 
             mindist = dist;
             _prev_point = p;
