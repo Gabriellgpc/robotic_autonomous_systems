@@ -4,6 +4,7 @@
 #include <configSpaceTools.hpp>      //Polygon2D, Robot, World, Vector2D, Config
 #include <occupating_grid.hpp>       //OccupationGrid, OccupationCell, ProximitySensorInfo
 #include <planning.hpp>              //manhattan, depthfirst, RegularGrid, CellGrid
+#include <kinematicsControllers.hpp> //PathFollowController
 
 #include <thread> //std::thread
 #include <vector> //std::vector
@@ -11,14 +12,16 @@
 #include <string> //std::string
 #include <queue>  //std:queue
 #include <atomic> //std::atomic
+#include <list>   //std::list
 
 //limiar usado para considerar uma celula ocupada
 constexpr double occupating_thr = 0.1;
 //Numero de sensores
-constexpr int N_SENSORS = 4;
 const std::string nodeName = std::string("b0RemoteApi_CoppeliaSim-addOn");
 const std::string channelName = std::string("b0RemoteApiAddOn");
 
+constexpr double K_ang = 0.5;
+constexpr double K_lin = 1.0;
 
 struct MyDatas
 {
@@ -36,6 +39,7 @@ public:
 private:
     std::thread thr_plotter;  //thread responsável pela plotagem dinâmica
     std::thread thr_receiver; //thread responsável por receber os dados da simulação
+    std::thread thr_controller; //thread responsável por receber os dados da simulação
     std::mutex  mtx; //mutex para acesso a configuração atual
 
     b0RemoteApi *client;
@@ -46,6 +50,7 @@ private:
     int handle_pioneer;
     int handle_leftMotor;
     int handle_rightMotor;
+    int handle_target;
 
     void _plotter_routine();
     void _receiver_routine();
@@ -53,7 +58,11 @@ private:
     void _readDatas();
 
     std::queue<MyDatas> myqueue;
-    OccupationGrid my_occup_grid;
+    OccupationGrid my_prob_occup_grid;
+    RegularGrid    my_regular_grid;
+    Robot          my_robot;
+    std::list<CellGrid> my_path_cell;
+    PathFollowController my_path_follower;
 
     friend void _receiver_func(void *X);
     friend void _plotter_func(void *X);

@@ -6,7 +6,7 @@ int main(int argc, char*argv[])
     Simulation_p3m3 sim;
 
     std::cout << "Running...\n";
-    sim.start_simulation("../p3m2/scenes/p3m2.ttt", 9999999);
+    sim.start_simulation("scenes/p3m3.ttt", 9999999);
 
     std::cout << "Press enter to stop the simulation." << std::endl;
     std::cin.get();
