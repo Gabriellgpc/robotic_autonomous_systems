@@ -58,7 +58,7 @@ void Simulation_p3m3::start_simulation(const std::string &scene,
 {
     std::vector<float> target_pos, pioneer_pos, pioneer_ori;
     MyDatas data;
-    my_prob_occup_grid.load_from_file("occupating_grid.save");
+    my_prob_occup_grid.load_from_file("../p3m2/occupating_grid_best.save");
 
     this->stop_simulation();
     this->to_stop = false;

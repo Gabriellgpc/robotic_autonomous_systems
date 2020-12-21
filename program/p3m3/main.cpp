@@ -9,6 +9,7 @@ int main(int argc, char*argv[])
     if(argc != 3)
     {
         std::cout << "Informe o ganho angular e linear para o controlador seguidor de caminho.\n";
+        return 1;
     }
 
     std::cout << "Running...\n";

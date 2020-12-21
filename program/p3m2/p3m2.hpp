@@ -2,7 +2,7 @@
 #include <b0RemoteApi.h>             //para comunicação com o coppeliaSim via Blue-zero
 #include <utils.hpp>                 //pioneer_model
 #include <configSpaceTools.hpp>      //Polygon2D, Robot, World, Vector2D, Config
-#include <occupating_grid.hpp>       //OccupationGrid, CellGrid, ProximitySensorInfo
+#include <occupating_grid.hpp>       //OccupationGrid, OccupationGridCell, ProximitySensorInfo
 
 #include <thread> //std::thread
 #include <vector> //std::vector
@@ -18,10 +18,10 @@ const std::string channelName = std::string("b0RemoteApiAddOn");
 struct MyDatas
 {
     Config q;
-    ProximitySensorInfo sensors[4] = {ProximitySensorInfo(0.1, 5.0, 60.0*M_PI/180.0, 0, 0.1), 
-                                      ProximitySensorInfo(0.1, 5.0, 60.0*M_PI/180.0, M_PI_2, 0.1),
-                                      ProximitySensorInfo(0.1, 5.0, 60.0*M_PI/180.0, M_PI_2*2, 0.1),
-                                      ProximitySensorInfo(0.1, 5.0, 60.0*M_PI/180.0, -M_PI_2, 0.1)};
+    ProximitySensorInfo sensors[4] = {ProximitySensorInfo(0.1, 3.0, 60.0*M_PI/180.0, 0, 0.1), 
+                                      ProximitySensorInfo(0.1, 3.0, 60.0*M_PI/180.0, M_PI_2, 0.1),
+                                      ProximitySensorInfo(0.1, 3.0, 60.0*M_PI/180.0, M_PI_2*2, 0.1),
+                                      ProximitySensorInfo(0.1, 3.0, 60.0*M_PI/180.0, -M_PI_2, 0.1)};
 };
 
 class Simulation_p3m2

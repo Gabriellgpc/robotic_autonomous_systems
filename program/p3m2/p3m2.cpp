@@ -47,12 +47,13 @@ void Simulation_p3m2::stop_simulation()
     {
         client->simxStopSimulation(client->simxServiceCall());
     }
-    my_occup_grid.save_to_file("occupating_grid02.save");
+    // my_occup_grid.save_to_file("occupating_grid_01.save");
 }
 
 void Simulation_p3m2::start_simulation(const std::string &scene, const float &time_to_stop)
 {
-    my_occup_grid.load_from_file("occupating_grid02.save");
+    // my_occup_grid.load_from_file("occupating_grid_best.save");
+    // my_occup_grid.load_from_file("occupating_grid_01.save");
     
     this->stop_simulation();
     this->to_stop = false;
@@ -116,7 +117,7 @@ void Simulation_p3m2::_plotter_routine()
     Gnuplot gp_work, gp_OG;
     MyDatas datas;
     Robot robot(Config(0, 0, 0), Polygon2D::rectangle_to_polygon2D(5.1900e-01, 4.1500e-01));
-    std::vector<CellGrid> og;
+    std::vector<OccupationGridCell> og;
 
     auto plots_work = gp_work.plotGroup();
     auto plots_OG   = gp_OG.plotGroup();

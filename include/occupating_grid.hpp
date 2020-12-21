@@ -4,9 +4,9 @@
 #include <string>
 #include <iostream>
 
-constexpr double l_0 = 0.0;//iniciar ocupados
-constexpr double l_oc= 0.5;//incremento em log odd para celulas provavelmente ocupadas
-constexpr double l_L =-0.7;//incremento para log odd para celulas provavelmente nao ocupadas
+constexpr double l_0 = 0.0;//iniciar desconhecidas
+constexpr double l_oc= 0.8;//incremento em log odd para celulas provavelmente ocupadas
+constexpr double l_L =-0.5;//incremento para log odd para celulas provavelmente nao ocupadas
 
 double log_odd(const double &p);
 double inv_log_odd(const double &l);
